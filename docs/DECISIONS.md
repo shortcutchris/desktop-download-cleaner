@@ -72,6 +72,12 @@ The diagnostics exporter accepts counts, booleans, enum settings, app version, a
 
 Desktop Cleaner ships English and German resource bundles and defaults to the macOS language. The user can switch the interface immediately in Settings, and the explicit choice persists locally. SwiftUI labels and dynamic app messages use the selected locale, and OpenAI proposal reasons request the same language. Stable category directory names, existing plans, filenames, paths, rules, and journals are never translated or rewritten, preserving transaction and rollback identities. Adding another language is limited to the central language manifest and one localized resource bundle.
 
+## Accepted for 1.3
+
+### Interactive Help is structurally isolated from user data
+
+The searchable Help center is fully offline and localized through the existing resource bundles. Its guided workflow uses fixed sample labels and ephemeral SwiftUI view state only. It has no access to folder bookmarks, scanners, plans, transactions, persistence, Keychain, or network adapters, so practicing source selection, planning, approval, staging, and undo cannot touch or transmit user data.
+
 ## Remaining distribution decisions
 
 - Whether move or copy should remain the default after usability testing

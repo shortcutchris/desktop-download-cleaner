@@ -4,6 +4,18 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-12
+
+### Added
+
+- A searchable offline Help window covering setup, plan review, staging and undo, privacy, AI assistance, rules, exclusions, shortcuts, and troubleshooting.
+- A localized interactive tour that safely simulates the complete cleanup workflow without accessing or changing files.
+- Help entry points in onboarding, the review toolbar, Settings, the menu bar, and the standard macOS Help menu with Command-?.
+
+### Changed
+
+- The German and English localization catalogs now include all Help articles, guided-tour controls, and safety explanations.
+
 ## [1.2.0] - 2026-07-12
 
 ### Added

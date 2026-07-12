@@ -40,6 +40,7 @@ struct SettingsView: View {
 
 private struct GeneralSettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Form {
@@ -61,6 +62,17 @@ private struct GeneralSettingsView: View {
             ))
             Toggle("Show notifications when staging completes", isOn: $model.notificationsEnabled)
             Toggle("Show menu bar item", isOn: $model.menuBarEnabled)
+            Section("Help") {
+                Button {
+                    openWindow(id: "help")
+                } label: {
+                    Label("Open Help & Guide", systemImage: "questionmark.circle")
+                }
+                .accessibilityIdentifier("settings.openHelp")
+                Text("The help center is available offline and follows the selected app language.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Diagnostics") {
                 Button("Preview Redacted Debug Export…") { model.prepareDiagnosticsExport() }
                     .accessibilityIdentifier("settings.previewDiagnostics")

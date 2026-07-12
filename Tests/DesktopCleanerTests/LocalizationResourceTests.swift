@@ -14,11 +14,15 @@ final class LocalizationResourceTests: XCTestCase {
             PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String]
         )
 
-        XCTAssertGreaterThan(catalog.count, 250)
+        XCTAssertGreaterThan(catalog.count, 400)
         XCTAssertEqual(catalog["Try Safe Demo"], "Sichere Demo ausprobieren")
         XCTAssertEqual(catalog["Settings…"], "Einstellungen…")
         XCTAssertEqual(catalog["Ready"], "Bereit")
         XCTAssertEqual(catalog["Documents"], "Dokumente")
+        XCTAssertEqual(catalog["Help & Guide"], "Hilfe & Anleitung")
+        XCTAssertEqual(catalog["Interactive Guided Tour"], "Interaktive Einführung")
+        XCTAssertEqual(catalog["This tour is a simulation. It never reads, creates, moves, or deletes files."],
+                       "Diese Einführung ist eine Simulation. Sie liest, erstellt, verschiebt oder löscht niemals Dateien.")
 
         for (key, value) in catalog {
             XCTAssertFalse(value.isEmpty, "Empty German translation for \(key)")

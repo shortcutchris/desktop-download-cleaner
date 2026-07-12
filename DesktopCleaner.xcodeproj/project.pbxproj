@@ -12,6 +12,7 @@
 		07B96F218D9AA9B7774BCE2D /* DesktopCleanerCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D92580478CC8EDC0049898E /* DesktopCleanerCore.framework */; };
 		0A0DEF9184E1B95F0182338E /* PlanStoreIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6115A2A6C3E44428F1EF000 /* PlanStoreIntegrationTests.swift */; };
 		0E5DA747BE8432C3C689C38A /* PlanningEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11D4F14C589A2595F520CA1 /* PlanningEngine.swift */; };
+		0ED3A54D261993BA7521A316 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02335B5FA5949D025B24E781 /* HelpView.swift */; };
 		1DCC7A3F714702D4F1897535 /* OpenAIRequestBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F782535FCB1B7DF926C2DD58 /* OpenAIRequestBuilderTests.swift */; };
 		22DFCDEC50D9D8273A7D9E45 /* Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 143560F2E6192828061BC176 /* Localization.swift */; };
 		25ED300BEE772B709EC14B3D /* SystemIntegrationServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E2D4D4FD27B0D1ECBF370B /* SystemIntegrationServices.swift */; };
@@ -178,6 +179,7 @@
 
 /* Begin PBXFileReference section */
 		01E2D4D4FD27B0D1ECBF370B /* SystemIntegrationServices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemIntegrationServices.swift; sourceTree = "<group>"; };
+		02335B5FA5949D025B24E781 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		04416A3E7F79B4D8FFDD9AD9 /* RuleEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleEngineTests.swift; sourceTree = "<group>"; };
 		049705B9C0E38833141498DF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		06658F106C11297E35C94839 /* LocalizationResourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationResourceTests.swift; sourceTree = "<group>"; };
@@ -358,6 +360,7 @@
 			children = (
 				5904DBFAF0F0F531A8368763 /* AppModel.swift */,
 				F410DD69FEE75114049C842C /* DesktopCleanerApp.swift */,
+				02335B5FA5949D025B24E781 /* HelpView.swift */,
 				143560F2E6192828061BC176 /* Localization.swift */,
 				B9F3F73ECFAB99B42678C596 /* MainView.swift */,
 				61BE5B5CA1DB98316D2399DF /* QuickLookPresenter.swift */,
@@ -680,6 +683,7 @@
 			files = (
 				FE5290C78128FC924E42DB54 /* AppModel.swift in Sources */,
 				642A0D358333094D4E1F3478 /* DesktopCleanerApp.swift in Sources */,
+				0ED3A54D261993BA7521A316 /* HelpView.swift in Sources */,
 				22DFCDEC50D9D8273A7D9E45 /* Localization.swift in Sources */,
 				8747F2C459938DF3AD97B936 /* MainView.swift in Sources */,
 				515C6D72C605E5BDCF484A7D /* QuickLookPresenter.swift in Sources */,
@@ -968,7 +972,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -988,7 +992,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1071,7 +1075,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = "";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1085,7 +1089,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";

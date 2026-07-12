@@ -11,8 +11,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
-    MARKETING_VERSION: "1.1.2"
-    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "1.1.3"
+    CURRENT_PROJECT_VERSION: "6"
     VERSIONING_SYSTEM: apple-generic
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: ""
@@ -71,6 +71,7 @@ targets:
         NSHumanReadableCopyright: "Copyright © 2026"
         SUAllowsAutomaticUpdates: false
         SUEnableAutomaticChecks: false
+        SUEnableInstallerLauncherService: true
         SUFeedURL: https://github.com/shortcutchris/desktop-download-cleaner/releases/latest/download/appcast.xml
         SUPublicEDKey: uV8qxotHQIQEaUQMU/VSAvfSWOrQnEvScSMiPp6H+M4=
     settings:

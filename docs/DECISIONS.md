@@ -44,6 +44,8 @@ The 1.0 icon uses an original dark-navy 3D document organizer with a metallic co
 
 The public GitHub release assets serve as the stable Sparkle feed after explicit authorization. Manual checks are available and automatic checks are opt-in. Every update must still be Developer ID signed, Apple notarized, and protected by the app's dedicated Sparkle EdDSA signature.
 
+Because Desktop Cleaner is sandboxed, Sparkle's Installer Launcher XPC service is enabled with only the documented `-spks` and `-spki` Mach lookup exceptions. The Downloader XPC service remains disabled because the app already has outgoing network access for its opt-in OpenAI and update capabilities.
+
 ### Explicit session finalization
 
 A staged session remains rollback-capable until the user chooses “Keep as Final.” Finalization changes only the durable journal state and never moves or deletes the staged files. A retained journal cannot later be rolled back accidentally.

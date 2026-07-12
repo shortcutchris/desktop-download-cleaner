@@ -4,6 +4,13 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-07-12
+
+### Fixed
+
+- Sandboxed installations now launch Sparkle's required Installer XPC service with the documented Mach-service exceptions.
+- Release automation now rejects archives that omit the required Sparkle sandbox configuration.
+
 ## [1.1.2] - 2026-07-12
 
 ### Fixed

@@ -30,6 +30,8 @@
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
 	<false/>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
 	<key>SUFeedURL</key>
 	<string>https://github.com/shortcutchris/desktop-download-cleaner/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>

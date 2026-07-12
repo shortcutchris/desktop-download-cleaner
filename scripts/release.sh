@@ -106,6 +106,19 @@ codesign \
   --preserve-metadata=identifier,entitlements,requirements,flags,runtime \
   "$APP"
 
+if [[ "$(plutil -extract SUEnableInstallerLauncherService raw -o - "$APP/Contents/Info.plist")" != "true" ]]; then
+  echo "Sparkle Installer Launcher XPC service is not enabled in Info.plist" >&2
+  exit 68
+fi
+
+APP_ENTITLEMENTS="$(codesign -d --entitlements :- "$APP" 2>/dev/null)"
+for mach_service in com.desktopcleaner.app-spks com.desktopcleaner.app-spki; do
+  if ! grep -Fq "<string>$mach_service</string>" <<< "$APP_ENTITLEMENTS"; then
+    echo "Missing Sparkle sandbox Mach lookup entitlement: $mach_service" >&2
+    exit 69
+  fi
+done
+
 codesign --verify --deep --strict --verbose=2 "$APP"
 ditto -c -k --keepParent "$APP" "$ZIP"
 xcrun notarytool submit "$ZIP" --wait --keychain-profile "$NOTARY_PROFILE"

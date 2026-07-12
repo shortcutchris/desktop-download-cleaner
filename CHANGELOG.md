@@ -4,6 +4,12 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-07-12
+
+### Changed
+
+- Published a clean signed update target for end-to-end validation from the updater-capable 1.1.3 release.
+
 ## [1.1.3] - 2026-07-12
 
 ### Fixed

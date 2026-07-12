@@ -30,11 +30,21 @@ AI returns schema-validated proposals. It cannot supply executable code, absolut
 
 The repository starts private while product naming, code signing, privacy language, and release readiness are developed. Public visibility is a deliberate release decision.
 
-## Open decisions for later milestones
+## Accepted for 1.0
 
-- Final product name and bundle identifier
-- Final icon direction
+### Metadata-only AI boundary
+
+The first release enables only the tested metadata capability. Text and visual preview transmission stay unavailable until separate per-capability extraction limits, per-file eligibility, exact preview UI, and tests exist. This preserves the product contract that file content is never transmitted implicitly.
+
+### Deliberate icon identity
+
+The 1.0 icon uses an original dark-navy 3D document organizer with a metallic containment ring and shield check. It communicates organization, review, and safety rather than deletion, trash, or generic cleanup.
+
+### Private release boundary
+
+The repository remains private. Sparkle automatic checks remain disabled because private GitHub assets cannot serve as a general public update feed. External release publication and repository visibility require explicit authorization after signing, notarization, and appcast verification.
+
+## Remaining distribution decisions
+
 - Whether move or copy should remain the default after usability testing
-- Exact supported macOS baseline after dependency validation
 - Paid distribution, direct download, or Mac App Store strategy
-

@@ -1,34 +1,46 @@
-# Desktop & Download Cleaner
+# Desktop Cleaner
 
-Native macOS utility for reviewing, organizing, and safely renaming accumulated files from Desktop, Downloads, and user-selected folders.
+Desktop Cleaner is a native macOS utility for safely organizing files accumulated in Desktop, Downloads, and explicitly selected folders. It creates a reviewable plan before anything moves, stages only approved files in a visible review folder, and can undo a complete session.
 
-The app is deliberately **not a Yoink clone**. Yoink solves temporary drag-and-drop storage. This project solves the later cleanup problem: understanding what has accumulated, preparing a safe organization plan, reviewing it, and applying it with a complete undo trail.
+> Nothing moves until the user approves it, nothing is deleted automatically, and every staged cleanup session can be undone.
 
-## Project status
+## What 1.0 includes
 
-Product specification and implementation briefing are complete. Application code has not been started yet.
+- Sandboxed, security-scoped access to user-selected source and review folders.
+- Read-only, depth-limited scanning with deterministic categories, exclusions, sensitive-file protection, and safe filename cleanup.
+- Searchable grouped proposals, Quick Look, editable filenames and categories, partial approval, and explicit local rules.
+- Collision-safe move or copy transactions with append-only JSON journals, restart recovery, and complete rollback.
+- Optional metadata-only OpenAI proposals through the Responses API and strict Structured Outputs.
+- A user-owned API key stored only in macOS Keychain, request-scope preview, connection test, and key deletion.
+- Menu bar access, launch at login, staging notifications, app-data reset, Sparkle integration, and a complete macOS icon set.
 
-## Start here
+Desktop Cleaner is not a drag-and-drop shelf and not a general system cleaner. It never automatically deletes files.
 
-1. Read [SESSION_BRIEF.md](SESSION_BRIEF.md).
-2. Treat [SPEC.md](SPEC.md) as the product contract.
-3. Follow [ARCHITECTURE.md](ARCHITECTURE.md) and [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
-4. Follow all repository rules in [AGENTS.md](AGENTS.md).
+## Privacy
 
-## Product promise
+The complete local workflow works without OpenAI. AI is off by default. In 1.0, the only enabled AI capability is metadata-only organization; file contents, absolute paths, previews, commands, and approval decisions are not sent. Sensitive filenames and extensions are always excluded from AI batches. See [docs/PRIVACY.md](docs/PRIVACY.md).
 
-> Nothing moves until the user approves it, nothing is deleted automatically, and every applied cleanup session can be undone.
+Do not store API keys in JSON, `.env`, plist, UserDefaults, source code, logs, or the repository. The app stores the user-owned key in Keychain under service `com.desktopcleaner.openai`.
 
-## Planned technology
+## Build and test
 
-- Swift 6 and SwiftUI
-- Native macOS application, macOS 14 or newer
-- Security-scoped folder access
-- Local-first deterministic classification
-- Optional OpenAI assistance through the Responses API
-- macOS Keychain for the user's API key
-- Sparkle 2 for updates outside the Mac App Store
-- GitHub Actions, signed and notarized GitHub releases
+Requirements: macOS 14 or newer, Xcode 16.4 or newer, and XcodeGen when changing target definitions.
 
-The working product and scheme name is `DesktopCleaner`. Branding can be changed later without changing the product scope.
+```sh
+xcodegen generate
+xcodebuild build -project DesktopCleaner.xcodeproj -scheme DesktopCleaner -destination 'platform=macOS' CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=-
+xcodebuild test -project DesktopCleaner.xcodeproj -scheme DesktopCleaner -destination 'platform=macOS' CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=-
+```
 
+The shared `DesktopCleaner` scheme runs unit, temporary-directory integration, and UI tests. Integration and UI fixtures use temporary directories and never alter the real Desktop or Downloads folders.
+
+## Repository guide
+
+- [SESSION_BRIEF.md](SESSION_BRIEF.md) — mission and safety summary
+- [SPEC.md](SPEC.md) — product contract
+- [ARCHITECTURE.md](ARCHITECTURE.md) — technical boundaries
+- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) — phased delivery plan
+- [docs/DECISIONS.md](docs/DECISIONS.md) — deliberate product and architecture decisions
+- [docs/RELEASING.md](docs/RELEASING.md) — signed release procedure
+
+`project.yml` is the checked-in XcodeGen source of truth. Regenerate `DesktopCleaner.xcodeproj` after target or build-setting changes.

@@ -1,0 +1,21 @@
+name: Build and test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project DesktopCleaner.xcodeproj -scheme DesktopCleaner
+      - name: Build
+        run: xcodebuild build -project DesktopCleaner.xcodeproj -scheme DesktopCleaner -destination 'platform=macOS' CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=-
+      - name: Test
+        run: xcodebuild test -project DesktopCleaner.xcodeproj -scheme DesktopCleaner -destination 'platform=macOS' CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=-

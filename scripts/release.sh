@@ -63,6 +63,49 @@ xcodebuild archive \
   CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
   DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM"
 
+# Sparkle's distributable helpers are intentionally ad-hoc signed. Re-sign
+# nested code first so the enclosing framework and app seals contain the final
+# Developer ID signatures and secure timestamps used for notarization.
+SPARKLE_FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
+SPARKLE_VERSION="$SPARKLE_FRAMEWORK/Versions/Current"
+SPARKLE_SIGNING_TARGETS=(
+  "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
+  "$SPARKLE_VERSION/XPCServices/Installer.xpc"
+  "$SPARKLE_VERSION/Updater.app"
+  "$SPARKLE_VERSION/Autoupdate"
+)
+
+for signing_target in "${SPARKLE_SIGNING_TARGETS[@]}"; do
+  if [[ ! -e "$signing_target" ]]; then
+    echo "Expected Sparkle signing target was not found: $signing_target" >&2
+    exit 67
+  fi
+
+  codesign \
+    --force \
+    --sign "$SIGNING_IDENTITY" \
+    --options runtime \
+    --timestamp \
+    --preserve-metadata=identifier,entitlements,requirements,flags,runtime \
+    "$signing_target"
+done
+
+codesign \
+  --force \
+  --sign "$SIGNING_IDENTITY" \
+  --options runtime \
+  --timestamp \
+  --preserve-metadata=identifier,entitlements,requirements,flags,runtime \
+  "$SPARKLE_FRAMEWORK"
+
+codesign \
+  --force \
+  --sign "$SIGNING_IDENTITY" \
+  --options runtime \
+  --timestamp \
+  --preserve-metadata=identifier,entitlements,requirements,flags,runtime \
+  "$APP"
+
 codesign --verify --deep --strict --verbose=2 "$APP"
 ditto -c -k --keepParent "$APP" "$ZIP"
 xcrun notarytool submit "$ZIP" --wait --keychain-profile "$NOTARY_PROFILE"
@@ -75,12 +118,14 @@ ditto -c -k --keepParent "$APP" "$ZIP"
 shasum -a 256 "$ZIP" > "$ZIP.sha256"
 
 SPARKLE_GENERATE_APPCAST="${SPARKLE_GENERATE_APPCAST:-$(find "$ROOT/.build" -type f -path '*/Sparkle/bin/generate_appcast' -print -quit)}"
+SPARKLE_ACCOUNT="${SPARKLE_ACCOUNT:-com.desktopcleaner.app}"
 if [[ -z "$SPARKLE_GENERATE_APPCAST" ]]; then
   echo "Sparkle generate_appcast was not found. Resolve packages or set SPARKLE_GENERATE_APPCAST." >&2
   exit 66
 fi
 
 "$SPARKLE_GENERATE_APPCAST" \
+  --account "$SPARKLE_ACCOUNT" \
   --download-url-prefix "https://github.com/shortcutchris/desktop-download-cleaner/releases/download/v$VERSION/" \
   "$ARTIFACTS"
 

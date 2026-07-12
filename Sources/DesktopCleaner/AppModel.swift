@@ -13,11 +13,13 @@ final class AppModel: ObservableObject {
     @Published var sessions: [CleanupSession] = []
     @Published var recoverableJournals: [TransactionJournal] = []
     @Published var rules: [UserRule] = []
+    @Published var exclusions: [ExclusionRule] = []
     @Published var selectedSourceID: UUID?
     @Published var selectedPlanItemID: UUID?
     @Published var selectedSessionID: UUID?
     @Published var searchText = ""
     @Published var isBusy = false
+    @Published var isAIRequestInFlight = false
     @Published var statusMessage = "Ready"
     @Published var errorMessage: String?
     @Published var operation: FileOperation {
@@ -47,12 +49,21 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    @Published var minimumAgeDays: Int {
+        didSet {
+            minimumAgeDays = max(0, min(minimumAgeDays, 365))
+            if !isResettingAppData {
+                UserDefaults.standard.set(minimumAgeDays, forKey: "minimumAgeDays")
+            }
+        }
+    }
 
     private let folderAccess = FolderAccessService()
     private let cleanupService = LocalCleanupService()
     private let journalStore = TransactionJournalStore()
     private let sessionStore = SessionStore()
     private let ruleStore = RuleStore()
+    private let exclusionStore = ExclusionStore()
     private let openAIService = OpenAIProposalService()
     private let launchAtLoginService = LaunchAtLoginService()
     private let notificationService = NotificationService()
@@ -62,6 +73,7 @@ final class AppModel: ObservableObject {
     private var directURLs: [UUID: URL] = [:]
     private var directReviewRootURL: URL?
     private var isResettingAppData = false
+    private var aiRequestTask: Task<Void, Never>?
 
     init() {
         let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
@@ -69,6 +81,7 @@ final class AppModel: ObservableObject {
         aiPrivacyLevel = AIPrivacyLevel(rawValue: UserDefaults.standard.string(forKey: "aiPrivacyLevel") ?? "") ?? .off
         launchAtLogin = launchAtLoginService.isEnabled
         notificationsEnabled = isUITesting ? false : (UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true)
+        minimumAgeDays = UserDefaults.standard.integer(forKey: "minimumAgeDays")
         if !isUITesting {
             Task { await loadPersistedState() }
         }
@@ -80,6 +93,7 @@ final class AppModel: ObservableObject {
     var selectedPlanItem: PlanItem? { plan?.items.first { $0.id == selectedPlanItemID } }
     var approvedCount: Int { plan?.items.filter { $0.approvalState == .approved }.count ?? 0 }
     var pendingCount: Int { plan?.items.filter { $0.approvalState == .pending }.count ?? 0 }
+    var estimatedAIInputTokens: Int { max(120, aiEligibleItems.count * 90) }
     var aiEligibleItems: [PlanItem] {
         plan?.items.filter { !$0.classification.isSensitive && !$0.classification.isExcluded } ?? []
     }
@@ -94,8 +108,11 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func chooseSourceFolder() {
-        guard let url = chooseFolder(prompt: "Choose a folder to organize") else { return }
+    func chooseSourceFolder(startingAt suggestedURL: URL? = nil) {
+        guard let url = chooseFolder(
+            prompt: "Choose a folder to organize",
+            startingAt: suggestedURL
+        ) else { return }
         Task {
             do {
                 let folder = try await folderAccess.authorize(url, kind: .source)
@@ -105,6 +122,14 @@ final class AppModel: ObservableObject {
                 if reviewRoot == nil { chooseReviewRoot() }
             } catch { present(error) }
         }
+    }
+
+    func chooseDesktopFolder() {
+        chooseSourceFolder(startingAt: FolderAccessService.suggestedDesktopURL)
+    }
+
+    func chooseDownloadsFolder() {
+        chooseSourceFolder(startingAt: FolderAccessService.suggestedDownloadsURL)
     }
 
     func chooseReviewRoot() {
@@ -138,7 +163,10 @@ final class AppModel: ObservableObject {
     }
 
     func scanSelectedSource() {
-        guard let source = selectedSource else { return }
+        guard let source = selectedSource, source.isEnabled else {
+            statusMessage = "Enable the selected source before scanning"
+            return
+        }
         setBusy("Scanning \(source.displayName)…")
         Task {
             do {
@@ -148,7 +176,9 @@ final class AppModel: ObservableObject {
                     source: source,
                     at: sourceURL,
                     sessionDirectoryName: sessionName,
-                    rules: rules
+                    rules: rules,
+                    exclusions: exclusions,
+                    minimumAgeDays: minimumAgeDays
                 )
                 plan = newPlan
                 selectedPlanItemID = newPlan.items.first?.id
@@ -302,25 +332,40 @@ final class AppModel: ObservableObject {
     }
 
     func confirmAIRequest() {
+        guard !isAIRequestInFlight else { return }
         let eligible = aiEligibleItems.map(\.scannedItem)
         showsAIRequestPreview = false
+        isAIRequestInFlight = true
         setBusy("Requesting AI metadata proposals for \(eligible.count) items…")
-        Task {
+        aiRequestTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 let proposals = try await openAIService.proposeMetadata(for: eligible)
+                try Task.checkCancellation()
                 applyAIProposals(proposals)
                 finishBusy("Applied \(proposals.count) validated AI proposals")
+            } catch is CancellationError {
+                finishBusy("AI request cancelled; local plan preserved")
             } catch {
                 finishBusy("AI proposals unavailable; local plan preserved")
                 present(error)
             }
+            isAIRequestInFlight = false
+            aiRequestTask = nil
         }
+    }
+
+    func cancelAIRequest() {
+        guard isAIRequestInFlight else { return }
+        aiRequestTask?.cancel()
+        statusMessage = "Cancelling AI request…"
     }
 
     func undo(_ session: CleanupSession) {
         setBusy("Undoing \(session.itemCount) items…")
         Task {
             do {
+                try await prepareSecurityScopedAccessForRollback()
                 let journal = try await transactionExecutor.rollback(journalID: session.journalID)
                 try await sessionStore.updateState(journalID: session.journalID, state: journal.state)
                 if let index = sessions.firstIndex(where: { $0.id == session.id }) {
@@ -338,12 +383,30 @@ final class AppModel: ObservableObject {
         setBusy("Recovering interrupted session…")
         Task {
             do {
+                try await prepareSecurityScopedAccessForRollback()
                 let recovered = try await transactionExecutor.rollback(journalID: journal.id)
                 recoverableJournals.removeAll { $0.id == journal.id }
                 try await sessionStore.updateState(journalID: journal.id, state: recovered.state)
                 finishBusy("Interrupted session rolled back safely")
             } catch {
                 finishBusy("Recovery needs attention")
+                present(error)
+            }
+        }
+    }
+
+    func retain(_ session: CleanupSession) {
+        setBusy("Keeping organized session as final…")
+        Task {
+            do {
+                let journal = try await transactionExecutor.retain(journalID: session.journalID)
+                try await sessionStore.updateState(journalID: session.journalID, state: journal.state)
+                if let index = sessions.firstIndex(where: { $0.id == session.id }) {
+                    sessions[index].state = journal.state
+                }
+                finishBusy("Session kept as final")
+            } catch {
+                finishBusy("Session could not be finalized")
                 present(error)
             }
         }
@@ -393,6 +456,54 @@ final class AppModel: ObservableObject {
         statusMessage = "Rule created — review it in Settings"
     }
 
+    func addExclusion() {
+        exclusions.append(ExclusionRule(kind: .filename, pattern: "*.tmp"))
+        saveExclusions()
+    }
+
+    func excludeSelectedFilename() {
+        guard let item = selectedPlanItem else { return }
+        let rule = ExclusionRule(kind: .filename, pattern: item.scannedItem.filename)
+        guard !exclusions.contains(where: { $0.kind == rule.kind && $0.pattern == rule.pattern }) else { return }
+        exclusions.append(rule)
+        saveExclusions()
+        plan?.items.removeAll { $0.id == item.id }
+        selectedPlanItemID = plan?.items.first?.id
+        statusMessage = "Excluded \(item.scannedItem.filename) from future plans"
+    }
+
+    func deleteExclusions(at offsets: IndexSet) {
+        exclusions.remove(atOffsets: offsets)
+        saveExclusions()
+    }
+
+    func saveExclusions() {
+        let current = exclusions.filter { !$0.pattern.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        Task {
+            do { try await exclusionStore.save(current) }
+            catch { present(error) }
+        }
+    }
+
+    func updateSource(id: UUID, isEnabled: Bool? = nil, scanDepth: Int? = nil) {
+        guard let index = sources.firstIndex(where: { $0.id == id }) else { return }
+        if let isEnabled { sources[index].isEnabled = isEnabled }
+        if let scanDepth { sources[index].scanDepth = max(0, min(scanDepth, 5)) }
+        let updated = sources[index]
+        guard directURLs[id] == nil else { return }
+        Task {
+            do { try await folderAccess.update(updated) }
+            catch { present(error) }
+        }
+    }
+
+    func showMainWindow() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.windows.first(where: {
+            $0.identifier?.rawValue.contains("AppWindow") == true
+        })?.makeKeyAndOrderFront(nil)
+    }
+
     func resetAllAppData() {
         Task {
             do {
@@ -406,6 +517,7 @@ final class AppModel: ObservableObject {
                 plan = nil
                 sessions = []
                 rules = []
+                exclusions = []
                 recoverableJournals = []
                 accessSessions = [:]
                 directURLs = [:]
@@ -415,6 +527,7 @@ final class AppModel: ObservableObject {
                 aiPrivacyLevel = .off
                 operation = .move
                 notificationsEnabled = true
+                minimumAgeDays = 0
                 launchAtLogin = false
                 aiConnectionStatus = "No API key stored"
                 statusMessage = "All app data deleted; user files were untouched"
@@ -492,6 +605,7 @@ final class AppModel: ObservableObject {
             selectedSourceID = sources.first?.id
             sessions = try await sessionStore.load()
             rules = try await ruleStore.load()
+            exclusions = try await exclusionStore.load()
             hasAPIKey = try await openAIService.hasAPIKey()
             aiConnectionStatus = hasAPIKey ? "API key stored securely in Keychain" : "No API key stored"
             let recoverable = try await transactionExecutor.recoverableJournals()
@@ -543,7 +657,14 @@ final class AppModel: ObservableObject {
         return session.url
     }
 
-    private func chooseFolder(prompt: String) -> URL? {
+    private func prepareSecurityScopedAccessForRollback() async throws {
+        for source in sources where directURLs[source.id] == nil {
+            _ = try await accessibleURL(for: source)
+        }
+        _ = try await accessibleReviewRootURL()
+    }
+
+    private func chooseFolder(prompt: String, startingAt suggestedURL: URL? = nil) -> URL? {
         let panel = NSOpenPanel()
         panel.title = prompt
         panel.prompt = "Choose"
@@ -551,6 +672,7 @@ final class AppModel: ObservableObject {
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
+        panel.directoryURL = suggestedURL
         return panel.runModal() == .OK ? panel.url : nil
     }
 

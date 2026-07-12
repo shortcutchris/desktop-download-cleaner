@@ -108,6 +108,14 @@ public actor FolderAccessService {
         self.codec = codec
     }
 
+    public nonisolated static var suggestedDesktopURL: URL? {
+        FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
+    }
+
+    public nonisolated static var suggestedDownloadsURL: URL? {
+        FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+    }
+
     public func authorize(
         _ url: URL,
         scanDepth: Int = 0,
@@ -129,6 +137,18 @@ public actor FolderAccessService {
     public func removeAuthorization(for id: UUID) throws {
         var records = try store.load()
         records.removeAll { $0.folder.id == id }
+        try store.save(records)
+    }
+
+    public func update(_ folder: SourceFolder) throws {
+        var records = try store.load()
+        guard let index = records.firstIndex(where: { $0.folder.id == folder.id }) else {
+            throw FolderAccessError.authorizationNotFound
+        }
+        records[index] = StoredFolderAuthorization(
+            folder: folder,
+            bookmarkData: records[index].bookmarkData
+        )
         try store.save(records)
     }
 

@@ -27,7 +27,8 @@ public actor AppDataResetService {
             "authorizedSourceFolders",
             "defaultFileOperation",
             "aiPrivacyLevel",
-            "notificationsEnabled"
+            "notificationsEnabled",
+            "minimumAgeDays"
         ]
         let defaults = defaultsSuiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
         for key in keys { defaults.removeObject(forKey: key) }

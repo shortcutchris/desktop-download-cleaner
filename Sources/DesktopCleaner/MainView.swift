@@ -58,10 +58,16 @@ private struct WelcomeView: View {
                         .frame(maxWidth: 530, alignment: .leading)
 
                     HStack(spacing: 12) {
-                        Button("Choose Source Folder…") { model.chooseSourceFolder() }
+                        Button("Desktop…") { model.chooseDesktopFolder() }
                             .buttonStyle(.borderedProminent)
                             .controlSize(.large)
                             .accessibilityIdentifier("welcome.chooseSource")
+                        Button("Downloads…") { model.chooseDownloadsFolder() }
+                            .buttonStyle(.bordered)
+                            .controlSize(.large)
+                        Button("Other…") { model.chooseSourceFolder() }
+                            .buttonStyle(.bordered)
+                            .controlSize(.large)
                         Button("Try Safe Demo") { model.useDemoFiles() }
                             .buttonStyle(.bordered)
                             .controlSize(.large)
@@ -119,16 +125,23 @@ private struct WorkspaceView: View {
                 .disabled(model.plan == nil)
                 .accessibilityIdentifier("toolbar.approveSafe")
 
-                Button { model.prepareAIRequest() } label: {
-                    Label("AI Proposals", systemImage: "sparkles")
+                if model.isAIRequestInFlight {
+                    Button(role: .cancel) { model.cancelAIRequest() } label: {
+                        Label("Cancel AI", systemImage: "stop.circle.fill")
+                    }
+                    .accessibilityIdentifier("toolbar.cancelAI")
+                } else {
+                    Button { model.prepareAIRequest() } label: {
+                        Label("AI Proposals", systemImage: "sparkles")
+                    }
+                    .disabled(
+                        model.aiPrivacyLevel != .metadataOnly
+                            || !model.hasAPIKey
+                            || model.aiEligibleItems.isEmpty
+                            || model.isBusy
+                    )
+                    .accessibilityIdentifier("toolbar.aiProposals")
                 }
-                .disabled(
-                    model.aiPrivacyLevel != .metadataOnly
-                        || !model.hasAPIKey
-                        || model.aiEligibleItems.isEmpty
-                        || model.isBusy
-                )
-                .accessibilityIdentifier("toolbar.aiProposals")
 
                 Button { model.stageApprovedItems() } label: {
                     Label("Stage \(model.approvedCount)", systemImage: "shippingbox.fill")
@@ -161,6 +174,29 @@ private struct AIRequestPreviewSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 6)
             }
+            GroupBox("Items in this request") {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 7) {
+                        ForEach(model.aiEligibleItems) { item in
+                            HStack {
+                                Text(item.scannedItem.filename)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text("Metadata")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(height: min(CGFloat(model.aiEligibleItems.count * 25), 125))
+            }
+            Label(
+                "Estimated input: about \(model.estimatedAIInputTokens) tokens. Actual API usage varies.",
+                systemImage: "gauge.with.dots.needle.33percent"
+            )
+            .font(.callout)
+            .foregroundStyle(.secondary)
             Label("No file contents, absolute paths, previews, API commands, or approval decisions are sent.", systemImage: "lock.fill")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -173,7 +209,7 @@ private struct AIRequestPreviewSheet: View {
             }
         }
         .padding(24)
-        .frame(width: 520)
+        .frame(width: 560)
     }
 }
 
@@ -184,8 +220,20 @@ private struct SidebarView: View {
         List(selection: $model.selectedSourceID) {
             Section("Sources") {
                 ForEach(model.sources) { source in
-                    Label(source.displayName, systemImage: source.displayName.localizedCaseInsensitiveContains("download") ? "arrow.down.circle.fill" : "folder.fill")
+                    Label {
+                        HStack {
+                            Text(source.displayName)
+                            if !source.isEnabled {
+                                Text("Disabled")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } icon: {
+                        Image(systemName: source.displayName.localizedCaseInsensitiveContains("download") ? "arrow.down.circle.fill" : "folder.fill")
+                    }
                         .tag(source.id)
+                        .opacity(source.isEnabled ? 1 : 0.55)
                         .contextMenu {
                             Button("Remove Source", role: .destructive) { model.removeSource(source) }
                         }
@@ -229,6 +277,9 @@ private struct SidebarView: View {
                         Button("Reveal in Finder") { model.reveal(session) }
                         if session.state == .staged || session.state == .failed {
                             Button("Undo Session") { model.undo(session) }
+                        }
+                        if session.state == .staged {
+                            Button("Keep as Final") { model.retain(session) }
                         }
                     }
                 }
@@ -390,6 +441,9 @@ private struct InspectorView: View {
                     HStack {
                         Button("Quick Look") { model.quickLookSelected() }
                         Button("Create Rule") { model.createRuleFromSelectedItem() }
+                        Menu("Exclude") {
+                            Button("This Filename") { model.excludeSelectedFilename() }
+                        }
                         Spacer()
                         Button("Reject", role: .destructive) { model.rejectSelected() }
                     }
@@ -419,6 +473,10 @@ private struct SessionInspector: View {
             if session.state == .staged || session.state == .failed {
                 Button("Undo Complete Session") { model.undo(session) }
                     .buttonStyle(.borderedProminent)
+            }
+            if session.state == .staged {
+                Button("Keep Session as Final") { model.retain(session) }
+                    .buttonStyle(.bordered)
             }
             Spacer()
         }
@@ -518,7 +576,11 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Desktop Cleaner").font(.headline)
             Text(model.statusMessage).font(.caption).foregroundStyle(.secondary)
+            LabeledContent("Pending", value: "\(model.pendingCount)")
+                .font(.caption)
             Divider()
+            Button("Open Current Plan") { model.showMainWindow() }
+                .disabled(model.plan == nil)
             Button("Scan \(model.selectedSource?.displayName ?? "Selected Source")") { model.scanSelectedSource() }
                 .disabled(model.selectedSourceID == nil || model.isBusy)
             if let session = model.sessions.first {

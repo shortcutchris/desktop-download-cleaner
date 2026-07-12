@@ -79,6 +79,37 @@ final class TransactionIntegrationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: staged.steps[0].destinationPath))
     }
 
+    func testRetainMarksStagedSessionFinalWithoutMovingItsFiles() async throws {
+        let sourceFile = sourceRoot.appendingPathComponent("final.pdf")
+        try Data("final".utf8).write(to: sourceFile)
+        let source = SourceFolder(displayName: "Source")
+        var plan = try await LocalCleanupService().scanAndPlan(
+            source: source,
+            at: sourceRoot,
+            sessionDirectoryName: "Session"
+        )
+        plan.items[0].approvalState = .approved
+        let executor = TransactionExecutor(journalStore: TransactionJournalStore(rootURL: journalRoot))
+        let staged = try await executor.stage(
+            plan: plan,
+            sourceRoots: [source.id: sourceRoot],
+            reviewRoot: reviewRoot,
+            operation: .move
+        )
+
+        let retained = try await executor.retain(journalID: staged.id)
+
+        XCTAssertEqual(retained.state, .retained)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: retained.steps[0].destinationPath))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: sourceFile.path))
+        do {
+            _ = try await executor.rollback(journalID: retained.id)
+            XCTFail("A retained session must not roll back")
+        } catch {
+            XCTAssertEqual(error as? TransactionError, .invalidTransactionState)
+        }
+    }
+
     func testStageResolvesLateDestinationCollisionWithoutOverwrite() async throws {
         let sourceFile = sourceRoot.appendingPathComponent("report.pdf")
         try Data("new".utf8).write(to: sourceFile)

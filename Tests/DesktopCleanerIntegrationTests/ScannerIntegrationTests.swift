@@ -79,6 +79,40 @@ final class ScannerIntegrationTests: XCTestCase {
         XCTAssertTrue(classification.isSensitive)
     }
 
+    func testConfiguredExclusionRemovesMatchingFileFromPlan() async throws {
+        try Data("temporary".utf8).write(to: fixtureRoot.appendingPathComponent("scratch.tmp"))
+        try Data("document".utf8).write(to: fixtureRoot.appendingPathComponent("keep.pdf"))
+
+        let plan = try await LocalCleanupService().scanAndPlan(
+            source: SourceFolder(displayName: "Fixture"),
+            at: fixtureRoot,
+            sessionDirectoryName: "Session",
+            exclusions: [ExclusionRule(kind: .filename, pattern: "*.tmp")]
+        )
+
+        XCTAssertEqual(plan.items.map(\.scannedItem.filename), ["keep.pdf"])
+    }
+
+    func testMinimumAgeSkipsRecentFilesButKeepsOlderFiles() async throws {
+        let recent = fixtureRoot.appendingPathComponent("recent.pdf")
+        let old = fixtureRoot.appendingPathComponent("old.pdf")
+        try Data("recent".utf8).write(to: recent)
+        try Data("old".utf8).write(to: old)
+        try FileManager.default.setAttributes(
+            [.modificationDate: try XCTUnwrap(Calendar.current.date(byAdding: .day, value: -30, to: Date()))],
+            ofItemAtPath: old.path
+        )
+
+        let plan = try await LocalCleanupService().scanAndPlan(
+            source: SourceFolder(displayName: "Fixture"),
+            at: fixtureRoot,
+            sessionDirectoryName: "Session",
+            minimumAgeDays: 7
+        )
+
+        XCTAssertEqual(plan.items.map(\.scannedItem.filename), ["old.pdf"])
+    }
+
     private func snapshot(of root: URL) throws -> [String: FileSnapshot] {
         let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey]
         guard let enumerator = FileManager.default.enumerator(

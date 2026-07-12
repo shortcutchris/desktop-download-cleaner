@@ -8,8 +8,8 @@ public enum ExclusionRuleKind: String, Codable, Sendable {
 
 public struct ExclusionRule: Codable, Hashable, Identifiable, Sendable {
     public let id: UUID
-    public let kind: ExclusionRuleKind
-    public let pattern: String
+    public var kind: ExclusionRuleKind
+    public var pattern: String
 
     public init(id: UUID = UUID(), kind: ExclusionRuleKind, pattern: String) {
         self.id = id

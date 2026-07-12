@@ -21,14 +21,27 @@ public struct LocalCleanupService: Sendable {
         at sourceURL: URL,
         sessionDirectoryName: String,
         rules: [UserRule] = [],
+        exclusions: [ExclusionRule] = [],
+        minimumAgeDays: Int = 0,
         existingRelativeDestinations: Set<String> = []
     ) async throws -> CleanupPlan {
         let items = try await scanner.scan(source: source, at: sourceURL)
         let ruleEngine = RuleEngine(rules: rules)
+        let activeClassifier = exclusions.isEmpty ? classifier : ClassificationEngine(exclusions: exclusions)
+        let cutoff = Calendar.current.date(
+            byAdding: .day,
+            value: -max(0, minimumAgeDays),
+            to: Date()
+        ) ?? .distantPast
         var classifications: [UUID: Classification] = [:]
         var suggestedBasenames: [UUID: String] = [:]
         for item in items {
-            let localClassification = classifier.classify(item)
+            if minimumAgeDays > 0,
+               let itemDate = item.modificationDate ?? item.creationDate,
+               itemDate > cutoff {
+                continue
+            }
+            let localClassification = activeClassifier.classify(item)
             if localClassification.isExcluded || localClassification.isSensitive {
                 classifications[item.id] = localClassification
             } else if let evaluation = ruleEngine.evaluate(item) {

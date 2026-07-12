@@ -13,9 +13,23 @@ public final class UpdateService {
             : nil
     }
 
-    public func checkForUpdates() {
-        guard isEnabled else { return }
+    public var canCheckForUpdates: Bool {
+        isEnabled && controller?.updater.canCheckForUpdates == true
+    }
+
+    public var automaticallyChecksForUpdates: Bool {
+        isEnabled && controller?.updater.automaticallyChecksForUpdates == true
+    }
+
+    @discardableResult
+    public func checkForUpdates() -> Bool {
+        guard canCheckForUpdates else { return false }
         controller?.checkForUpdates(nil)
+        return true
+    }
+
+    public func setAutomaticallyChecksForUpdates(_ enabled: Bool) {
+        guard isEnabled else { return }
+        controller?.updater.automaticallyChecksForUpdates = enabled
     }
 }
-

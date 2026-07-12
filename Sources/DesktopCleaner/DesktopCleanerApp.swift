@@ -41,6 +41,10 @@ struct DesktopCleanerApp: App {
                     .keyboardShortcut(.space, modifiers: [])
                     .disabled(model.selectedPlanItem == nil)
             }
+            CommandGroup(after: .appInfo) {
+                Button("Check for Updates…") { model.checkForUpdates() }
+                    .disabled(!model.canCheckForUpdates)
+            }
         }
 
         MenuBarExtra(isInserted: $menuBarExtraEnabled) {

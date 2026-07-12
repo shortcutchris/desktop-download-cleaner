@@ -299,6 +299,8 @@ private struct AISettingsView: View {
 }
 
 private struct UpdateSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+
     var body: some View {
         Form {
             LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
@@ -306,9 +308,14 @@ private struct UpdateSettingsView: View {
                 Text("Stable").tag("Stable")
             }
             .disabled(true)
-            Toggle("Automatically check for updates", isOn: .constant(false))
-                .disabled(true)
-            Text("Automatic checks remain disabled while release assets are private. External releases require a signed appcast and an accessible feed.")
+            Button("Check for Updates…") { model.checkForUpdates() }
+                .disabled(!model.canCheckForUpdates)
+                .accessibilityIdentifier("settings.checkForUpdates")
+            Toggle("Automatically check for updates", isOn: Binding(
+                get: { model.automaticallyChecksForUpdates },
+                set: { model.setAutomaticallyChecksForUpdates($0) }
+            ))
+            Text("Updates come from the public GitHub release feed and are verified with Desktop Cleaner's dedicated Sparkle signature. Automatic checks are opt-in.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

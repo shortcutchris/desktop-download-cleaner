@@ -4,6 +4,17 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-12
+
+### Added
+
+- Manual “Check for Updates…” actions in Settings and the application menu.
+- An opt-in automatic update preference backed by Sparkle's signed public release feed.
+
+### Changed
+
+- Public distribution and update documentation now reflect the approved public GitHub repository.
+
 ## [1.1.0] - 2026-07-12
 
 ### Added

@@ -66,6 +66,7 @@ final class AppModel: ObservableObject {
     @Published var showsDiagnosticsPreview = false
     @Published var diagnosticsPreview = ""
     @Published var launchAtLogin: Bool
+    @Published var automaticallyChecksForUpdates: Bool
     @Published var notificationsEnabled: Bool {
         didSet {
             if !isResettingAppData {
@@ -121,6 +122,7 @@ final class AppModel: ObservableObject {
     private let notificationService = NotificationService()
     private let appDataResetService = AppDataResetService()
     private let diagnosticsExportService = DiagnosticsExportService()
+    private let updateService: UpdateService
     private lazy var transactionExecutor = TransactionExecutor(journalStore: journalStore)
     private var accessSessions: [UUID: FolderAccessSession] = [:]
     private var directURLs: [UUID: URL] = [:]
@@ -132,9 +134,11 @@ final class AppModel: ObservableObject {
 
     init() {
         let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        updateService = UpdateService(isEnabled: !isUITesting)
         operation = FileOperation(rawValue: UserDefaults.standard.string(forKey: "defaultFileOperation") ?? "") ?? .move
         aiPrivacyLevel = AIPrivacyLevel(rawValue: UserDefaults.standard.string(forKey: "aiPrivacyLevel") ?? "") ?? .off
         launchAtLogin = launchAtLoginService.isEnabled
+        automaticallyChecksForUpdates = updateService.automaticallyChecksForUpdates
         notificationsEnabled = isUITesting ? false : (UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true)
         minimumAgeDays = UserDefaults.standard.integer(forKey: "minimumAgeDays")
         menuBarEnabled = UserDefaults.standard.object(forKey: "menuBarEnabled") as? Bool ?? true
@@ -159,6 +163,7 @@ final class AppModel: ObservableObject {
     }
 
     var needsOnboarding: Bool { sources.isEmpty }
+    var canCheckForUpdates: Bool { updateService.canCheckForUpdates }
     var selectedSource: SourceFolder? { sources.first { $0.id == selectedSourceID } }
     var selectedSession: CleanupSession? { sessions.first { $0.id == selectedSessionID } }
     var selectedPlanItemID: UUID? { selectedPlanItemIDs.count == 1 ? selectedPlanItemIDs.first : nil }
@@ -723,10 +728,22 @@ final class AppModel: ObservableObject {
                 collisionSuffixStyle = .enDash
                 aiQualityPreference = .fast
                 launchAtLogin = false
+                setAutomaticallyChecksForUpdates(false)
                 aiConnectionStatus = "No API key stored"
                 statusMessage = "All app data deleted; user files were untouched"
             } catch { present(error) }
         }
+    }
+
+    func checkForUpdates() {
+        statusMessage = updateService.checkForUpdates()
+            ? "Checking for updates…"
+            : "Update checker is starting; try again in a moment"
+    }
+
+    func setAutomaticallyChecksForUpdates(_ enabled: Bool) {
+        updateService.setAutomaticallyChecksForUpdates(enabled)
+        automaticallyChecksForUpdates = updateService.automaticallyChecksForUpdates
     }
 
     func deleteRules(at offsets: IndexSet) {

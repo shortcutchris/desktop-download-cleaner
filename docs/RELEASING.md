@@ -32,4 +32,4 @@ scripts/release.sh 1.0.0 <notarytool-keychain-profile>
 
 The script reads signing and notarization credentials only through the local Keychain/toolchain. It uses the Sparkle account `com.desktopcleaner.app` by default; set `SPARKLE_ACCOUNT` only when deliberately migrating keys. It prepares artifacts but intentionally does not commit, tag, push, merge, or publish them.
 
-The current repository is private, so its GitHub release assets are not a public Sparkle feed. Keep automatic checks disabled until distribution visibility and the signed appcast URL are deliberately approved.
+The repository is public and its GitHub release assets provide the stable Sparkle feed. Automatic checks remain off by default and are enabled only by the user. Before publishing, test the signed update path from the immediately preceding updater-capable release.

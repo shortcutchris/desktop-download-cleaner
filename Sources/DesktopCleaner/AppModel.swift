@@ -144,10 +144,14 @@ final class AppModel: ObservableObject {
     private var diagnosticsExportData: Data?
 
     init() {
-        let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        let processInfo = ProcessInfo.processInfo
+        let isUITesting = processInfo.arguments.contains("--ui-testing")
+            || processInfo.environment["DESKTOP_CLEANER_UI_TESTING"] == "1"
         updateService = UpdateService(isEnabled: !isUITesting)
         appLanguage = AppLanguage(
-            rawValue: UserDefaults.standard.string(forKey: "appLanguage") ?? ""
+            rawValue: processInfo.environment["DESKTOP_CLEANER_LANGUAGE"]
+                ?? UserDefaults.standard.string(forKey: "appLanguage")
+                ?? ""
         ) ?? .system
         operation = FileOperation(rawValue: UserDefaults.standard.string(forKey: "defaultFileOperation") ?? "") ?? .move
         aiPrivacyLevel = AIPrivacyLevel(rawValue: UserDefaults.standard.string(forKey: "aiPrivacyLevel") ?? "") ?? .off

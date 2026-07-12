@@ -4,6 +4,12 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-07-12
+
+### Fixed
+
+- Release checksum files now contain portable asset filenames instead of local build paths.
+
 ## [1.1.1] - 2026-07-12
 
 ### Added

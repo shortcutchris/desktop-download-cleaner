@@ -115,7 +115,10 @@ spctl --assess --type execute --verbose=2 "$APP"
 
 rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
-shasum -a 256 "$ZIP" > "$ZIP.sha256"
+(
+  cd "$ARTIFACTS"
+  shasum -a 256 "$(basename "$ZIP")" > "$(basename "$ZIP.sha256")"
+)
 
 SPARKLE_GENERATE_APPCAST="${SPARKLE_GENERATE_APPCAST:-$(find "$ROOT/.build" -type f -path '*/Sparkle/bin/generate_appcast' -print -quit)}"
 SPARKLE_ACCOUNT="${SPARKLE_ACCOUNT:-com.desktopcleaner.app}"

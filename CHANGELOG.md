@@ -21,6 +21,8 @@ All notable changes are documented here. The project follows semantic versioning
 
 - App-data reset now also clears the minimum-age scan policy while continuing to leave all user files untouched.
 - A successful staging transaction clears the now-consumed current plan so it cannot be applied twice.
+- Release automation now re-signs Sparkle's embedded helpers with Developer ID and secure timestamps before notarization.
+- Desktop Cleaner now embeds its dedicated Sparkle public update key, while the private key remains in macOS Keychain.
 
 ## [1.0.0] - 2026-07-12
 

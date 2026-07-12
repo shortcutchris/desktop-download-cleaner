@@ -6,6 +6,16 @@ Desktop Cleaner is a native macOS utility for safely organizing files accumulate
 
 ![Desktop Cleaner 1.1 review workspace](docs/images/desktop-cleaner-1.1.jpg)
 
+## Download and install
+
+Download the latest notarized universal macOS build from [GitHub Releases](https://github.com/shortcutchris/desktop-download-cleaner/releases/latest/download/DesktopCleaner-1.1.0.zip).
+
+1. Download and expand `DesktopCleaner-1.1.0.zip`.
+2. Move **Desktop Cleaner.app** into `/Applications`.
+3. Launch the app, choose Desktop, Downloads, or another folder, and review the read-only cleanup plan before approving anything.
+
+The release is signed with Developer ID, notarized by Apple, stapled for offline Gatekeeper verification, and includes both Apple Silicon and Intel code. The release page also provides a SHA-256 checksum and a signed Sparkle appcast. Automatic update checks remain off by default.
+
 ## What 1.1 includes
 
 - Sandboxed, security-scoped access to user-selected source and review folders.

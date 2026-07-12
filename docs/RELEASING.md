@@ -8,7 +8,7 @@ External releases require explicit authorization. Never commit signing, notariza
 - Developer ID Application identity installed in Keychain.
 - Hardened runtime and app sandbox enabled.
 - `notarytool` Keychain profile configured locally.
-- Sparkle EdDSA private key available only in the local Keychain.
+- Sparkle EdDSA private key available only in the local Keychain under account `com.desktopcleaner.app`.
 - Repository visibility and release-asset URLs compatible with the configured Sparkle feed.
 
 ## Reproducible checklist
@@ -16,7 +16,7 @@ External releases require explicit authorization. Never commit signing, notariza
 1. Update `MARKETING_VERSION`, increment `CURRENT_PROJECT_VERSION`, changelog, and `release-notes/<version>.md`.
 2. Regenerate the Xcode project with `xcodegen generate`.
 3. Build and run the complete test suite with the shared scheme; record exact counts.
-4. Archive with `Developer ID Application`, export the app, and verify `codesign --verify --deep --strict --verbose=2` plus `spctl --assess --type execute --verbose=2`.
+4. Archive with `Developer ID Application`, re-sign Sparkle's embedded ad-hoc helpers bottom-up with the same identity and secure timestamps, then verify `codesign --verify --deep --strict --verbose=2` plus `spctl --assess --type execute --verbose=2`.
 5. Zip the signed app with `ditto -c -k --keepParent`, submit it with `xcrun notarytool submit --wait --keychain-profile <profile>`, then staple and validate the ticket.
 6. Create the release DMG/ZIP and generate a signed Sparkle appcast with Sparkle's `generate_appcast` tool.
 7. Commit through a focused pull request, wait for successful CI, merge, and create the signed `v<version>` tag.
@@ -30,6 +30,6 @@ The local build-through-appcast steps are automated by:
 scripts/release.sh 1.0.0 <notarytool-keychain-profile>
 ```
 
-The script reads signing and notarization credentials only through the local Keychain/toolchain. It prepares artifacts but intentionally does not commit, tag, push, merge, or publish them.
+The script reads signing and notarization credentials only through the local Keychain/toolchain. It uses the Sparkle account `com.desktopcleaner.app` by default; set `SPARKLE_ACCOUNT` only when deliberately migrating keys. It prepares artifacts but intentionally does not commit, tag, push, merge, or publish them.
 
 The current repository is private, so its GitHub release assets are not a public Sparkle feed. Keep automatic checks disabled until distribution visibility and the signed appcast URL are deliberately approved.

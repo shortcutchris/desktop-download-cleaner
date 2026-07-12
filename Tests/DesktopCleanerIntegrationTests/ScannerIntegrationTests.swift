@@ -113,6 +113,25 @@ final class ScannerIntegrationTests: XCTestCase {
         XCTAssertEqual(plan.items.map(\.scannedItem.filename), ["old.pdf"])
     }
 
+    func testDuplicateDetectionHashesOnlySameSizeEligibleFilesAndMarksLaterCopy() async throws {
+        try Data("identical-content".utf8).write(to: fixtureRoot.appendingPathComponent("a.pdf"))
+        try Data("identical-content".utf8).write(to: fixtureRoot.appendingPathComponent("b.pdf"))
+        try Data("different".utf8).write(to: fixtureRoot.appendingPathComponent("c.pdf"))
+        try Data("identical-content".utf8).write(to: fixtureRoot.appendingPathComponent("secret.pem"))
+
+        let plan = try await LocalCleanupService().scanAndPlan(
+            source: SourceFolder(displayName: "Fixture"),
+            at: fixtureRoot,
+            sessionDirectoryName: "Session"
+        )
+
+        XCTAssertEqual(plan.items.first(where: { $0.scannedItem.filename == "a.pdf" })?.classification.category, .documents)
+        let duplicate = try XCTUnwrap(plan.items.first(where: { $0.scannedItem.filename == "b.pdf" }))
+        XCTAssertEqual(duplicate.classification.category, .duplicates)
+        XCTAssertTrue(duplicate.classification.reason.contains("a.pdf"))
+        XCTAssertEqual(plan.items.first(where: { $0.scannedItem.filename == "secret.pem" })?.classification.category, .sensitive)
+    }
+
     private func snapshot(of root: URL) throws -> [String: FileSnapshot] {
         let keys: [URLResourceKey] = [.isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey, .contentModificationDateKey]
         guard let enumerator = FileManager.default.enumerator(

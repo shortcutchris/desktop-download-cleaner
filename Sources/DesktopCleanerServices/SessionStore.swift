@@ -34,10 +34,22 @@ public actor SessionStore {
         try encoder.encode(sessions).write(to: fileURL, options: .atomic)
     }
 
+    public func pruneFinalized(before cutoff: Date) throws -> [UUID] {
+        var sessions = try load()
+        let removable = sessions.filter {
+            $0.createdAt < cutoff && [.retained, .rolledBack].contains($0.state)
+        }
+        guard !removable.isEmpty else { return [] }
+        let journalIDs = Set(removable.map(\.journalID))
+        sessions.removeAll { journalIDs.contains($0.journalID) }
+        try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try encoder.encode(sessions).write(to: fileURL, options: .atomic)
+        return Array(journalIDs)
+    }
+
     private static func defaultURL() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return base.appendingPathComponent("DesktopCleaner/sessions.json")
     }
 }
-

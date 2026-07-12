@@ -1,6 +1,14 @@
 import DesktopCleanerCore
 import Foundation
 
+public protocol AIProposalServicing: Sendable {
+    func hasAPIKey() async throws -> Bool
+    func saveAPIKey(_ key: String) async throws
+    func deleteAPIKey() async throws
+    func testConnection() async throws
+    func proposeMetadata(for items: [ScannedItem], quality: AIQualityPreference) async throws -> [AIProposal]
+}
+
 public enum OpenAIServiceError: Error, Equatable {
     case missingAPIKey
     case invalidResponse
@@ -55,12 +63,15 @@ public struct OpenAIRequestBuilder: Sendable {
         self.model = model
     }
 
-    public func makeMetadataRequest(items: [ScannedItem]) throws -> URLRequest {
+    public func makeMetadataRequest(
+        items: [ScannedItem],
+        quality: AIQualityPreference = .fast
+    ) throws -> URLRequest {
         let metadata = items.map(AIMetadataItem.init)
         let payload: [String: Any] = [
             "model": model,
             "store": false,
-            "reasoning": ["effort": "low"],
+            "reasoning": ["effort": quality.reasoningEffort],
             "instructions": "Classify file metadata and suggest concise basenames. suggestedBasename must exclude the file extension. Never invent extensions, paths, commands, deletion actions, or approval decisions. Return one item for every supplied id.",
             "input": try metadataJSONObject(metadata),
             "text": [
@@ -112,7 +123,7 @@ public struct OpenAIRequestBuilder: Sendable {
     ] }
 }
 
-public actor OpenAIProposalService {
+public actor OpenAIProposalService: AIProposalServicing {
     private let keyStore: any APIKeyStoring
     private let session: URLSession
     private let requestBuilder: OpenAIRequestBuilder
@@ -154,9 +165,12 @@ public actor OpenAIProposalService {
         }
     }
 
-    public func proposeMetadata(for items: [ScannedItem]) async throws -> [AIProposal] {
+    public func proposeMetadata(
+        for items: [ScannedItem],
+        quality: AIQualityPreference = .fast
+    ) async throws -> [AIProposal] {
         guard let key = try await keyStore.loadAPIKey() else { throw OpenAIServiceError.missingAPIKey }
-        var request = try requestBuilder.makeMetadataRequest(items: items)
+        var request = try requestBuilder.makeMetadataRequest(items: items, quality: quality)
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
 
         var lastError: Error?
@@ -180,6 +194,8 @@ public actor OpenAIProposalService {
                     try await Task.sleep(for: .seconds(1 << attempt))
                     continue
                 }
+            } catch let error as URLError where error.code == .cancelled && Task.isCancelled {
+                throw CancellationError()
             }
         }
         throw lastError ?? OpenAIServiceError.invalidResponse

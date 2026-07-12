@@ -125,6 +125,31 @@ private struct WorkspaceView: View {
                 .disabled(model.plan == nil)
                 .accessibilityIdentifier("toolbar.approveSafe")
 
+                Menu {
+                    Button("Select All Visible") { model.selectAllVisibleItems() }
+                    Divider()
+                    Button("Approve Selected Safe Items") { model.approveSelectedItems() }
+                        .disabled(model.selectedPlanItemIDs.isEmpty)
+                    Button("Reject Selected Items", role: .destructive) { model.rejectSelectedItems() }
+                        .disabled(model.selectedPlanItemIDs.isEmpty)
+                } label: {
+                    Label("Selected \(model.selectedPlanItemIDs.count)", systemImage: "checklist")
+                }
+                .disabled(model.plan == nil)
+                .accessibilityIdentifier("toolbar.selection")
+
+                Menu {
+                    Picker("Sort proposals", selection: $model.planSortOption) {
+                        ForEach(PlanSortOption.allCases, id: \.self) { option in
+                            Text(option.displayName).tag(option)
+                        }
+                    }
+                } label: {
+                    Label("Sort", systemImage: "arrow.up.arrow.down")
+                }
+                .disabled(model.plan == nil)
+                .accessibilityIdentifier("toolbar.sort")
+
                 if model.isAIRequestInFlight {
                     Button(role: .cancel) { model.cancelAIRequest() } label: {
                         Label("Cancel AI", systemImage: "stop.circle.fill")
@@ -259,7 +284,7 @@ private struct SidebarView: View {
                 }
                 ForEach(model.sessions) { session in
                     Button {
-                        model.selectedSessionID = session.id
+                        model.selectSession(session)
                     } label: {
                         HStack {
                             Image(systemName: session.state.iconName)
@@ -300,6 +325,10 @@ private struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("Desktop Cleaner")
+        .onChange(of: model.selectedSourceID) { _, _ in
+            model.selectedSessionID = nil
+            model.selectedSessionFileURLs = []
+        }
     }
 }
 
@@ -320,7 +349,7 @@ private struct PlanListView: View {
             } else if model.filteredPlanItems.isEmpty {
                 ContentUnavailableView.search(text: model.searchText)
             } else {
-                List(selection: $model.selectedPlanItemID) {
+                List(selection: $model.selectedPlanItemIDs) {
                     ForEach(ItemCategory.allCases, id: \.self) { category in
                         let items = model.filteredPlanItems.filter { $0.classification.category == category }
                         if !items.isEmpty {
@@ -394,6 +423,8 @@ private struct InspectorView: View {
     var body: some View {
         if let session = model.selectedSession {
             SessionInspector(session: session)
+        } else if model.selectedPlanItems.count > 1 {
+            MultiSelectionInspector(items: model.selectedPlanItems)
         } else if let item = model.selectedPlanItem {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
@@ -430,6 +461,21 @@ private struct InspectorView: View {
                     InspectorSection(title: "Why this proposal") {
                         Text(item.classification.reason)
                         ConfidenceBadge(confidence: item.classification.confidence, sensitive: item.classification.isSensitive)
+                    }
+
+                    InspectorSection(title: "Destination and privacy") {
+                        LabeledContent("Destination", value: item.relativeDestination)
+                        LabeledContent(
+                            "Proposal source",
+                            value: item.classification.reason.hasPrefix("AI:") ? "OpenAI · metadata only" : "Local deterministic logic"
+                        )
+                        if item.hadCollision {
+                            Label("Collision resolved without overwriting", systemImage: "exclamationmark.shield.fill")
+                                .foregroundStyle(.orange)
+                        } else {
+                            Label("Destination is collision-free", systemImage: "checkmark.shield.fill")
+                                .foregroundStyle(.green)
+                        }
                     }
 
                     InspectorSection(title: "Original") {
@@ -478,6 +524,43 @@ private struct SessionInspector: View {
                 Button("Keep Session as Final") { model.retain(session) }
                     .buttonStyle(.bordered)
             }
+            if !model.selectedSessionFileURLs.isEmpty {
+                Divider()
+                Text("Organized files").font(.headline)
+                Text("Drag an individual file to Finder or another app.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                List(model.selectedSessionFileURLs, id: \.self) { url in
+                    Label(url.lastPathComponent, systemImage: "doc.fill")
+                        .lineLimit(1)
+                        .draggable(url)
+                        .accessibilityLabel("Drag organized file \(url.lastPathComponent)")
+                }
+                .frame(minHeight: 120, maxHeight: 240)
+            }
+            Spacer()
+        }
+        .padding(24)
+    }
+}
+
+private struct MultiSelectionInspector: View {
+    @EnvironmentObject private var model: AppModel
+    let items: [PlanItem]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Image(systemName: "checklist.checked")
+                .font(.system(size: 48))
+                .foregroundStyle(.tint)
+            Text("\(items.count) proposals selected")
+                .font(.title2.bold())
+            Text("Low-confidence and sensitive files remain unapproved by batch actions.")
+                .foregroundStyle(.secondary)
+            Button("Approve Selected Safe Items") { model.approveSelectedItems() }
+                .buttonStyle(.borderedProminent)
+            Button("Reject Selected Items", role: .destructive) { model.rejectSelectedItems() }
+                .buttonStyle(.bordered)
             Spacer()
         }
         .padding(24)
@@ -570,7 +653,6 @@ private struct StatusBar: View {
 
 struct MenuBarView: View {
     @EnvironmentObject private var model: AppModel
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

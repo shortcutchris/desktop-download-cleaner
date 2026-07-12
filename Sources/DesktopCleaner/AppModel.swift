@@ -5,6 +5,22 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum PlanSortOption: String, CaseIterable {
+    case filename
+    case newest
+    case largest
+    case confidence
+
+    var displayName: String {
+        switch self {
+        case .filename: "Filename"
+        case .newest: "Newest first"
+        case .largest: "Largest first"
+        case .confidence: "Confidence"
+        }
+    }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var sources: [SourceFolder] = []
@@ -15,8 +31,14 @@ final class AppModel: ObservableObject {
     @Published var rules: [UserRule] = []
     @Published var exclusions: [ExclusionRule] = []
     @Published var selectedSourceID: UUID?
-    @Published var selectedPlanItemID: UUID?
+    @Published var selectedPlanItemIDs: Set<UUID> = [] {
+        didSet {
+            if !selectedPlanItemIDs.isEmpty { selectedSessionID = nil }
+        }
+    }
     @Published var selectedSessionID: UUID?
+    @Published var selectedSessionFileURLs: [URL] = []
+    @Published var planSortOption: PlanSortOption = .filename
     @Published var searchText = ""
     @Published var isBusy = false
     @Published var isAIRequestInFlight = false
@@ -41,6 +63,8 @@ final class AppModel: ObservableObject {
     @Published var aiConnectionStatus = "No API key stored"
     @Published var showsAIRequestPreview = false
     @Published var showsResetConfirmation = false
+    @Published var showsDiagnosticsPreview = false
+    @Published var diagnosticsPreview = ""
     @Published var launchAtLogin: Bool
     @Published var notificationsEnabled: Bool {
         didSet {
@@ -57,23 +81,54 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    @Published var menuBarEnabled: Bool {
+        didSet {
+            if !isResettingAppData {
+                UserDefaults.standard.set(menuBarEnabled, forKey: "menuBarEnabled")
+            }
+        }
+    }
+    @Published var sessionHistoryRetention: SessionHistoryRetention {
+        didSet {
+            if !isResettingAppData {
+                UserDefaults.standard.set(sessionHistoryRetention.rawValue, forKey: "sessionHistoryRetention")
+                Task { await applySessionRetentionPolicy() }
+            }
+        }
+    }
+    @Published var filenameNamingStyle: FilenameNamingStyle {
+        didSet { persist(filenameNamingStyle.rawValue, key: "filenameNamingStyle") }
+    }
+    @Published var filenameDateStyle: FilenameDateStyle {
+        didSet { persist(filenameDateStyle.rawValue, key: "filenameDateStyle") }
+    }
+    @Published var collisionSuffixStyle: CollisionSuffixStyle {
+        didSet { persist(collisionSuffixStyle.rawValue, key: "collisionSuffixStyle") }
+    }
+    @Published var aiQualityPreference: AIQualityPreference {
+        didSet { persist(aiQualityPreference.rawValue, key: "aiQualityPreference") }
+    }
 
     private let folderAccess = FolderAccessService()
     private let cleanupService = LocalCleanupService()
     private let journalStore = TransactionJournalStore()
     private let sessionStore = SessionStore()
+    private let planStore = PlanStore()
     private let ruleStore = RuleStore()
     private let exclusionStore = ExclusionStore()
-    private let openAIService = OpenAIProposalService()
+    private let openAIService: any AIProposalServicing = OpenAIProposalService()
     private let launchAtLoginService = LaunchAtLoginService()
     private let notificationService = NotificationService()
     private let appDataResetService = AppDataResetService()
+    private let diagnosticsExportService = DiagnosticsExportService()
     private lazy var transactionExecutor = TransactionExecutor(journalStore: journalStore)
     private var accessSessions: [UUID: FolderAccessSession] = [:]
     private var directURLs: [UUID: URL] = [:]
     private var directReviewRootURL: URL?
     private var isResettingAppData = false
     private var aiRequestTask: Task<Void, Never>?
+    private var planPersistenceTask: Task<Void, Never>?
+    private var diagnosticsExportData: Data?
 
     init() {
         let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
@@ -82,6 +137,22 @@ final class AppModel: ObservableObject {
         launchAtLogin = launchAtLoginService.isEnabled
         notificationsEnabled = isUITesting ? false : (UserDefaults.standard.object(forKey: "notificationsEnabled") as? Bool ?? true)
         minimumAgeDays = UserDefaults.standard.integer(forKey: "minimumAgeDays")
+        menuBarEnabled = UserDefaults.standard.object(forKey: "menuBarEnabled") as? Bool ?? true
+        sessionHistoryRetention = SessionHistoryRetention(
+            rawValue: UserDefaults.standard.string(forKey: "sessionHistoryRetention") ?? ""
+        ) ?? .forever
+        filenameNamingStyle = FilenameNamingStyle(
+            rawValue: UserDefaults.standard.string(forKey: "filenameNamingStyle") ?? ""
+        ) ?? .natural
+        filenameDateStyle = FilenameDateStyle(
+            rawValue: UserDefaults.standard.string(forKey: "filenameDateStyle") ?? ""
+        ) ?? .preserve
+        collisionSuffixStyle = CollisionSuffixStyle(
+            rawValue: UserDefaults.standard.string(forKey: "collisionSuffixStyle") ?? ""
+        ) ?? .enDash
+        aiQualityPreference = AIQualityPreference(
+            rawValue: UserDefaults.standard.string(forKey: "aiQualityPreference") ?? ""
+        ) ?? .fast
         if !isUITesting {
             Task { await loadPersistedState() }
         }
@@ -90,7 +161,11 @@ final class AppModel: ObservableObject {
     var needsOnboarding: Bool { sources.isEmpty }
     var selectedSource: SourceFolder? { sources.first { $0.id == selectedSourceID } }
     var selectedSession: CleanupSession? { sessions.first { $0.id == selectedSessionID } }
+    var selectedPlanItemID: UUID? { selectedPlanItemIDs.count == 1 ? selectedPlanItemIDs.first : nil }
     var selectedPlanItem: PlanItem? { plan?.items.first { $0.id == selectedPlanItemID } }
+    var selectedPlanItems: [PlanItem] {
+        plan?.items.filter { selectedPlanItemIDs.contains($0.id) } ?? []
+    }
     var approvedCount: Int { plan?.items.filter { $0.approvalState == .approved }.count ?? 0 }
     var pendingCount: Int { plan?.items.filter { $0.approvalState == .pending }.count ?? 0 }
     var estimatedAIInputTokens: Int { max(120, aiEligibleItems.count * 90) }
@@ -98,13 +173,39 @@ final class AppModel: ObservableObject {
         plan?.items.filter { !$0.classification.isSensitive && !$0.classification.isExcluded } ?? []
     }
     var ruleConflicts: [RuleConflict] { RuleEngine(rules: rules).conflicts() }
+    var renamePreferences: RenamePreferences {
+        RenamePreferences(
+            namingStyle: filenameNamingStyle,
+            dateStyle: filenameDateStyle,
+            collisionSuffixStyle: collisionSuffixStyle
+        )
+    }
     var filteredPlanItems: [PlanItem] {
-        guard let items = plan?.items else { return [] }
-        guard !searchText.isEmpty else { return items }
-        return items.filter {
-            $0.scannedItem.filename.localizedCaseInsensitiveContains(searchText)
-                || $0.proposedFilename.localizedCaseInsensitiveContains(searchText)
-                || $0.classification.category.folderName.localizedCaseInsensitiveContains(searchText)
+        guard var items = plan?.items else { return [] }
+        if !searchText.isEmpty {
+            items = items.filter {
+                $0.scannedItem.filename.localizedCaseInsensitiveContains(searchText)
+                    || $0.proposedFilename.localizedCaseInsensitiveContains(searchText)
+                    || $0.classification.category.folderName.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+        return items.sorted { lhs, rhs in
+            switch planSortOption {
+            case .filename:
+                return lhs.proposedFilename.localizedStandardCompare(rhs.proposedFilename) == .orderedAscending
+            case .newest:
+                return (lhs.scannedItem.modificationDate ?? .distantPast) > (rhs.scannedItem.modificationDate ?? .distantPast)
+            case .largest:
+                return lhs.scannedItem.size == rhs.scannedItem.size
+                    ? lhs.proposedFilename < rhs.proposedFilename
+                    : lhs.scannedItem.size > rhs.scannedItem.size
+            case .confidence:
+                let lhsRank = Self.confidenceRank(lhs.classification.confidence)
+                let rhsRank = Self.confidenceRank(rhs.classification.confidence)
+                return lhsRank == rhsRank
+                    ? lhs.proposedFilename.localizedStandardCompare(rhs.proposedFilename) == .orderedAscending
+                    : lhsRank > rhsRank
+            }
         }
     }
 
@@ -178,10 +279,12 @@ final class AppModel: ObservableObject {
                     sessionDirectoryName: sessionName,
                     rules: rules,
                     exclusions: exclusions,
-                    minimumAgeDays: minimumAgeDays
+                    minimumAgeDays: minimumAgeDays,
+                    renamePreferences: renamePreferences
                 )
                 plan = newPlan
-                selectedPlanItemID = newPlan.items.first?.id
+                selectedPlanItemIDs = Set(newPlan.items.first.map { [$0.id] } ?? [])
+                persistCurrentPlan()
                 finishBusy("\(newPlan.items.count) proposals ready")
             } catch {
                 finishBusy("Scan failed")
@@ -193,6 +296,7 @@ final class AppModel: ObservableObject {
     func toggleApproval(for id: UUID) {
         guard let index = plan?.items.firstIndex(where: { $0.id == id }) else { return }
         plan?.items[index].approvalState = plan?.items[index].approvalState == .approved ? .pending : .approved
+        persistCurrentPlan()
     }
 
     func approveSafeItems() {
@@ -204,25 +308,57 @@ final class AppModel: ObservableObject {
             }
         }
         plan = current
+        persistCurrentPlan()
+    }
+
+    func selectAllVisibleItems() {
+        selectedPlanItemIDs = Set(filteredPlanItems.map(\.id))
+        statusMessage = "Selected \(selectedPlanItemIDs.count) visible proposals"
+    }
+
+    func approveSelectedItems() {
+        guard var current = plan else { return }
+        var approved = 0
+        for index in current.items.indices where selectedPlanItemIDs.contains(current.items[index].id) {
+            let item = current.items[index]
+            guard item.classification.confidence != .low, !item.classification.isSensitive else { continue }
+            current.items[index].approvalState = .approved
+            approved += 1
+        }
+        plan = current
+        persistCurrentPlan()
+        statusMessage = "Approved \(approved) selected safe proposals"
+    }
+
+    func rejectSelectedItems() {
+        guard var current = plan else { return }
+        for index in current.items.indices where selectedPlanItemIDs.contains(current.items[index].id) {
+            current.items[index].approvalState = .rejected
+        }
+        plan = current
+        persistCurrentPlan()
+        statusMessage = "Rejected \(selectedPlanItemIDs.count) selected proposals"
     }
 
     func rejectSelected() {
         guard let id = selectedPlanItemID,
               let index = plan?.items.firstIndex(where: { $0.id == id }) else { return }
         plan?.items[index].approvalState = .rejected
+        persistCurrentPlan()
     }
 
     func updateSelectedFilename(_ value: String) {
         guard let id = selectedPlanItemID,
               let index = plan?.items.firstIndex(where: { $0.id == id }) else { return }
         let item = plan!.items[index]
-        let sanitized = FilenameSanitizer().filename(
+        let sanitized = FilenameSanitizer(preferences: renamePreferences).filename(
             basename: URL(fileURLWithPath: value).deletingPathExtension().lastPathComponent,
             pathExtension: item.scannedItem.pathExtension
         )
         plan?.items[index].proposedFilename = sanitized
         let components = item.relativeDestination.split(separator: "/").dropLast()
         plan?.items[index].relativeDestination = (components.map(String.init) + [sanitized]).joined(separator: "/")
+        persistCurrentPlan()
     }
 
     func updateSelectedCategory(_ category: ItemCategory) {
@@ -239,6 +375,7 @@ final class AppModel: ObservableObject {
         plan?.items[index].relativeDestination = [
             plan!.sessionDirectoryName, category.folderName, item.proposedFilename
         ].joined(separator: "/")
+        persistCurrentPlan()
     }
 
     func stageApprovedItems() {
@@ -263,7 +400,10 @@ final class AppModel: ObservableObject {
                 )
                 try await sessionStore.upsert(session)
                 sessions.insert(session, at: 0)
-                selectedSessionID = session.id
+                plan = nil
+                planPersistenceTask?.cancel()
+                try await planStore.clear()
+                selectSession(session)
                 finishBusy("Staged \(journal.steps.count) items safely")
                 if notificationsEnabled {
                     _ = try? await notificationService.requestAuthorization()
@@ -340,7 +480,10 @@ final class AppModel: ObservableObject {
         aiRequestTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let proposals = try await openAIService.proposeMetadata(for: eligible)
+                let proposals = try await openAIService.proposeMetadata(
+                    for: eligible,
+                    quality: aiQualityPreference
+                )
                 try Task.checkCancellation()
                 applyAIProposals(proposals)
                 finishBusy("Applied \(proposals.count) validated AI proposals")
@@ -371,6 +514,7 @@ final class AppModel: ObservableObject {
                 if let index = sessions.firstIndex(where: { $0.id == session.id }) {
                     sessions[index].state = journal.state
                 }
+                if selectedSessionID == session.id { selectedSessionFileURLs = [] }
                 finishBusy("Session restored")
             } catch {
                 finishBusy("Undo needs attention")
@@ -408,6 +552,22 @@ final class AppModel: ObservableObject {
             } catch {
                 finishBusy("Session could not be finalized")
                 present(error)
+            }
+        }
+    }
+
+    func selectSession(_ session: CleanupSession) {
+        selectedSessionID = session.id
+        selectedPlanItemIDs = []
+        selectedSessionFileURLs = []
+        Task {
+            do {
+                _ = try await accessibleReviewRootURL()
+                selectedSessionFileURLs = try await transactionExecutor.existingStagedFileURLs(
+                    journalID: session.journalID
+                )
+            } catch {
+                if [.staged, .retained, .failed].contains(session.state) { present(error) }
             }
         }
     }
@@ -468,7 +628,8 @@ final class AppModel: ObservableObject {
         exclusions.append(rule)
         saveExclusions()
         plan?.items.removeAll { $0.id == item.id }
-        selectedPlanItemID = plan?.items.first?.id
+        selectedPlanItemIDs = Set(plan?.items.first.map { [$0.id] } ?? [])
+        persistCurrentPlan()
         statusMessage = "Excluded \(item.scannedItem.filename) from future plans"
     }
 
@@ -504,11 +665,35 @@ final class AppModel: ObservableObject {
         })?.makeKeyAndOrderFront(nil)
     }
 
+    func prepareDiagnosticsExport() {
+        do {
+            let data = try diagnosticsExportService.reportData(for: diagnosticsInput())
+            diagnosticsExportData = data
+            diagnosticsPreview = String(decoding: data, as: UTF8.self)
+            showsDiagnosticsPreview = true
+        } catch { present(error) }
+    }
+
+    func exportDiagnostics() {
+        guard let data = diagnosticsExportData else { return }
+        let panel = NSSavePanel()
+        panel.title = "Export Redacted Desktop Cleaner Diagnostics"
+        panel.nameFieldStringValue = "Desktop Cleaner Diagnostics.json"
+        panel.allowedContentTypes = [.json]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try diagnosticsExportService.export(data, to: url)
+            showsDiagnosticsPreview = false
+            statusMessage = "Redacted diagnostics exported"
+        } catch { present(error) }
+    }
+
     func resetAllAppData() {
         Task {
             do {
                 isResettingAppData = true
                 defer { isResettingAppData = false }
+                planPersistenceTask?.cancel()
                 try await openAIService.deleteAPIKey()
                 try launchAtLoginService.setEnabled(false)
                 try await appDataResetService.resetMetadataAndSettings()
@@ -516,6 +701,9 @@ final class AppModel: ObservableObject {
                 reviewRoot = nil
                 plan = nil
                 sessions = []
+                selectedPlanItemIDs = []
+                selectedSessionID = nil
+                selectedSessionFileURLs = []
                 rules = []
                 exclusions = []
                 recoverableJournals = []
@@ -528,6 +716,12 @@ final class AppModel: ObservableObject {
                 operation = .move
                 notificationsEnabled = true
                 minimumAgeDays = 0
+                menuBarEnabled = true
+                sessionHistoryRetention = .forever
+                filenameNamingStyle = .natural
+                filenameDateStyle = .preserve
+                collisionSuffixStyle = .enDash
+                aiQualityPreference = .fast
                 launchAtLogin = false
                 aiConnectionStatus = "No API key stored"
                 statusMessage = "All app data deleted; user files were untouched"
@@ -603,6 +797,14 @@ final class AppModel: ObservableObject {
             sources = folders.filter { $0.kind == .source }
             reviewRoot = folders.last { $0.kind == .reviewRoot }
             selectedSourceID = sources.first?.id
+            if let savedPlan = try await planStore.load(),
+               let savedSourceID = savedPlan.items.first?.scannedItem.sourceID,
+               sources.contains(where: { $0.id == savedSourceID }) {
+                plan = savedPlan
+                selectedSourceID = savedSourceID
+                selectedPlanItemIDs = Set(savedPlan.items.first.map { [$0.id] } ?? [])
+            }
+            await applySessionRetentionPolicy()
             sessions = try await sessionStore.load()
             rules = try await ruleStore.load()
             exclusions = try await exclusionStore.load()
@@ -630,7 +832,7 @@ final class AppModel: ObservableObject {
             guard let index = current.items.firstIndex(where: { $0.scannedItem.id == proposal.itemID }),
                   !current.items[index].classification.isSensitive else { continue }
             let original = current.items[index]
-            let filename = FilenameSanitizer().filename(
+            let filename = FilenameSanitizer(preferences: renamePreferences).filename(
                 basename: proposal.suggestedBasename,
                 pathExtension: original.scannedItem.pathExtension
             )
@@ -646,6 +848,7 @@ final class AppModel: ObservableObject {
             current.items[index].approvalState = .pending
         }
         plan = current
+        persistCurrentPlan()
     }
 
     private func accessibleReviewRootURL() async throws -> URL {
@@ -691,6 +894,63 @@ final class AppModel: ObservableObject {
             errorMessage = "Network connection failed: \(urlError.localizedDescription)"
         } else {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func applySessionRetentionPolicy() async {
+        guard let days = sessionHistoryRetention.dayCount,
+              let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) else { return }
+        do {
+            let removedJournalIDs = try await sessionStore.pruneFinalized(before: cutoff)
+            try await journalStore.removeFinalized(ids: removedJournalIDs)
+            sessions = try await sessionStore.load()
+        } catch { present(error) }
+    }
+
+    private func diagnosticsInput() -> DiagnosticsInput {
+        let sessionCounts = Dictionary(grouping: sessions, by: { $0.state.rawValue })
+            .mapValues(\.count)
+        return DiagnosticsInput(
+            appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development",
+            buildNumber: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Development",
+            sourceCount: sources.count,
+            sessionStateCounts: sessionCounts,
+            ruleCount: rules.count,
+            exclusionCount: exclusions.count,
+            hasAPIKey: hasAPIKey,
+            aiPrivacyLevel: aiPrivacyLevel.rawValue,
+            aiQuality: aiQualityPreference,
+            operation: operation,
+            minimumAgeDays: minimumAgeDays,
+            menuBarEnabled: menuBarEnabled,
+            renamePreferences: renamePreferences,
+            sessionRetention: sessionHistoryRetention
+        )
+    }
+
+    private func persist(_ value: String, key: String) {
+        if !isResettingAppData { UserDefaults.standard.set(value, forKey: key) }
+    }
+
+    private func persistCurrentPlan() {
+        guard let snapshot = plan else { return }
+        planPersistenceTask?.cancel()
+        planPersistenceTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try Task.checkCancellation()
+                try await planStore.save(snapshot)
+            } catch is CancellationError {
+                return
+            } catch { present(error) }
+        }
+    }
+
+    private static func confidenceRank(_ confidence: ClassificationConfidence) -> Int {
+        switch confidence {
+        case .high: 3
+        case .medium: 2
+        case .low: 1
         }
     }
 

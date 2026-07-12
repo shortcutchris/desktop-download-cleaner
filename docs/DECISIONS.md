@@ -52,6 +52,18 @@ A staged session remains rollback-capable until the user chooses “Keep as Fina
 
 Per-source enablement and depth, the minimum-age threshold, and glob exclusions are evaluated locally before planning. Missing timestamps remain visible instead of being silently filtered, and exclusions remove matching items from the plan without mutating their source files.
 
+### Hash duplicates only when metadata makes a match possible
+
+Duplicate detection hashes only eligible files that share a non-zero size. Sensitive, excluded, alias, symlink, and package items are not read. The digest is ephemeral, stays local, and marks only later deterministic matches as duplicates; the first stable relative path remains the reference item.
+
+### Persist plans, consume them after staging
+
+The current plan and its user decisions survive relaunch so review work is not lost. Transaction preflight still revalidates source identity before mutation. Once staging succeeds, the persisted plan is cleared because its source state has been consumed and replaying it would be misleading.
+
+### Diagnostics use an aggregate-only data shape
+
+The diagnostics exporter accepts counts, booleans, enum settings, app version, and operating-system version only. It never accepts source folders, plan items, transaction steps, errors, file names, paths, credentials, or model payloads, making redaction a structural boundary rather than a best-effort text filter.
+
 ## Remaining distribution decisions
 
 - Whether move or copy should remain the default after usability testing

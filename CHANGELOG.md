@@ -4,16 +4,23 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-12
+
 ### Added
 
 - Desktop and Downloads picker shortcuts plus persisted per-source enablement and scan-depth controls.
 - Persisted filename, extension, and relative-path glob exclusions and an optional minimum file-age scan policy.
 - Explicit session finalization, restart-safe security-scope reacquisition for rollback, menu-bar pending counts, and core keyboard shortcuts.
 - Exact AI batch item preview, approximate input-token indication, and user cancellation without discarding the local plan.
+- Local hash-on-demand duplicate detection that never uploads or persists file content.
+- Sortable multi-selection review, exact destination/collision/privacy details, and drag-out of individual staged files.
+- Persistent current-plan decisions, configurable renaming/date/collision styles, AI quality, and finalized-session history retention.
+- Exact-preview redacted diagnostics export that structurally excludes filenames, paths, file contents, credentials, and model payloads.
 
 ### Changed
 
 - App-data reset now also clears the minimum-age scan policy while continuing to leave all user files untouched.
+- A successful staging transaction clears the now-consumed current plan so it cannot be applied twice.
 
 ## [1.0.0] - 2026-07-12
 

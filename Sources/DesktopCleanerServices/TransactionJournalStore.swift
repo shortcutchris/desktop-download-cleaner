@@ -48,6 +48,21 @@ public actor TransactionJournalStore {
         rootURL.appendingPathComponent("\(id.uuidString).jsonl")
     }
 
+    public func removeFinalized(ids: [UUID]) throws {
+        for id in ids {
+            let journal = try? load(id: id)
+            guard let journal, [.retained, .rolledBack].contains(journal.state) else { continue }
+            let snapshotURL = rootURL.appendingPathComponent("\(id.uuidString).json")
+            let eventsURL = eventLogURL(id: id)
+            if FileManager.default.fileExists(atPath: snapshotURL.path) {
+                try FileManager.default.removeItem(at: snapshotURL)
+            }
+            if FileManager.default.fileExists(atPath: eventsURL.path) {
+                try FileManager.default.removeItem(at: eventsURL)
+            }
+        }
+    }
+
     private func appendEvent(for journal: TransactionJournal) throws {
         let event = JournalEvent(
             timestamp: journal.updatedAt,
@@ -84,4 +99,3 @@ public actor TransactionJournalStore {
         let failureDescription: String?
     }
 }
-

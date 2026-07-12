@@ -172,6 +172,16 @@ public actor TransactionExecutor {
         return journal
     }
 
+    public func existingStagedFileURLs(journalID: UUID) async throws -> [URL] {
+        let journal = try await journalStore.load(id: journalID)
+        guard [.staged, .retained, .failed].contains(journal.state) else { return [] }
+        return journal.steps
+            .filter { $0.state == .applied }
+            .map { URL(fileURLWithPath: $0.destinationPath) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
     private func containedURL(
         relativePath: String,
         root: URL,

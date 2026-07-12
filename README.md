@@ -4,15 +4,18 @@ Desktop Cleaner is a native macOS utility for safely organizing files accumulate
 
 > Nothing moves until the user approves it, nothing is deleted automatically, and every staged cleanup session can be undone.
 
-## What 1.0 includes
+![Desktop Cleaner 1.1 review workspace](docs/images/desktop-cleaner-1.1.jpg)
+
+## What 1.1 includes
 
 - Sandboxed, security-scoped access to user-selected source and review folders.
-- Read-only scanning with per-source depth and enablement, an optional minimum-age threshold, editable glob exclusions, deterministic categories, sensitive-file protection, and safe filename cleanup.
-- Searchable grouped proposals, Quick Look, editable filenames and categories, partial approval, and explicit local rules.
-- Collision-safe move or copy transactions with append-only JSON journals, restart recovery, complete rollback, and an explicit “keep as final” state.
-- Optional cancellable metadata-only OpenAI proposals through the Responses API and strict Structured Outputs, with an exact item preview and approximate input-use indication.
+- Read-only scanning with per-source depth and enablement, an optional minimum-age threshold, editable glob exclusions, deterministic categories, local hash-on-demand duplicate detection, sensitive-file protection, and safe filename cleanup.
+- Searchable, sortable, grouped proposals with multi-selection, Quick Look, exact destinations and collision state, editable filenames and categories, persistent decisions, and explicit local rules.
+- Collision-safe move or copy transactions with append-only JSON journals, restart recovery, complete rollback, explicit “keep as final,” configurable history retention, and drag-out of individual organized files.
+- Configurable naming, date, and collision styles that continue to preserve the real extension.
+- Optional cancellable metadata-only OpenAI proposals through the Responses API and strict Structured Outputs, with quality control, an exact item preview, and approximate input-use indication.
 - A user-owned API key stored only in macOS Keychain, request-scope preview, connection test, and key deletion.
-- Menu bar access, launch at login, staging notifications, app-data reset, Sparkle integration, and a complete macOS icon set.
+- Menu bar access, launch at login, staging notifications, exact redacted-diagnostics preview/export, app-data reset, Sparkle integration, and a complete original premium 3D macOS icon set.
 
 Desktop Cleaner is not a drag-and-drop shelf and not a general system cleaner. It never automatically deletes files.
 

@@ -18,6 +18,18 @@ final class FilenameSanitizerTests: XCTestCase {
         XCTAssertEqual(FilenameSanitizer().normalizedBasename("../"), "Untitled")
     }
 
+    func testAppliesConfiguredNamingDateAndCollisionStylesWithoutChangingExtension() {
+        let sanitizer = FilenameSanitizer(preferences: RenamePreferences(
+            namingStyle: .underscored,
+            dateStyle: .iso8601,
+            collisionSuffixStyle: .parentheses
+        ))
+        let item = makeItem(filename: "Invoice 2026_7_2.pdf")
+
+        XCTAssertEqual(sanitizer.suggestedFilename(for: item), "Invoice_2026-07-02.pdf")
+        XCTAssertEqual(sanitizer.collisionFilename(original: "Invoice_2026-07-02.pdf", ordinal: 2), "Invoice_2026-07-02 (2).pdf")
+    }
+
     func testLimitsBasenameByUTF8Length() {
         let result = FilenameSanitizer(maximumBasenameUTF8Length: 32)
             .normalizedBasename(String(repeating: "é", count: 100))
@@ -25,4 +37,3 @@ final class FilenameSanitizerTests: XCTestCase {
         XCTAssertLessThanOrEqual(result.utf8.count, 32)
     }
 }
-

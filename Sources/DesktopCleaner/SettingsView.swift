@@ -10,6 +10,10 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             SourceSettingsView()
                 .tabItem { Label("Sources", systemImage: "folder") }
+            ReviewSettingsView()
+                .tabItem { Label("Review", systemImage: "shippingbox") }
+            RenamingSettingsView()
+                .tabItem { Label("Renaming", systemImage: "textformat") }
             RuleSettingsView()
                 .tabItem { Label("Rules", systemImage: "list.bullet.rectangle") }
             AISettingsView()
@@ -27,6 +31,10 @@ struct SettingsView: View {
         } message: {
             Text("Bookmarks, settings, rules, scan cache, journals, sessions, and the Keychain API key will be removed. User files are never deleted.")
         }
+        .sheet(isPresented: $model.showsDiagnosticsPreview) {
+            DiagnosticsPreviewSheet()
+                .environmentObject(model)
+        }
     }
 }
 
@@ -40,13 +48,14 @@ private struct GeneralSettingsView: View {
                 set: { model.setLaunchAtLogin($0) }
             ))
             Toggle("Show notifications when staging completes", isOn: $model.notificationsEnabled)
-            Picker("Default operation", selection: $model.operation) {
-                Text("Move").tag(FileOperation.move)
-                Text("Copy").tag(FileOperation.copy)
+            Toggle("Show menu bar item", isOn: $model.menuBarEnabled)
+            Section("Diagnostics") {
+                Button("Preview Redacted Debug Export…") { model.prepareDiagnosticsExport() }
+                    .accessibilityIdentifier("settings.previewDiagnostics")
+                Text("The preview is exactly what will be exported. File names, paths, file contents, API keys, and model payloads are excluded.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            Text("Existing files are never overwritten. Move and copy operations can both be undone.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             Section("Privacy") {
                 Button("Delete All App Data…", role: .destructive) {
                     model.showsResetConfirmation = true
@@ -55,6 +64,64 @@ private struct GeneralSettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct ReviewSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Form {
+            Section("Visible review folder") {
+                LabeledContent("Current", value: model.reviewRoot?.displayName ?? "Not selected")
+                Button("Choose Review Folder…") { model.chooseReviewRoot() }
+            }
+            Section("Staging") {
+                Picker("Default operation", selection: $model.operation) {
+                    Text("Move").tag(FileOperation.move)
+                    Text("Copy").tag(FileOperation.copy)
+                }
+                Picker("Session history", selection: $model.sessionHistoryRetention) {
+                    ForEach(SessionHistoryRetention.allCases, id: \.self) { policy in
+                        Text(policy.displayName).tag(policy)
+                    }
+                }
+                Text("Retention removes only finalized or rolled-back metadata. Staged files and undoable sessions are never pruned.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Label("Existing files are never overwritten. Move and copy operations can both be undone.", systemImage: "checkmark.shield.fill")
+                .foregroundStyle(.secondary)
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct RenamingSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Form {
+            Picker("Naming style", selection: $model.filenameNamingStyle) {
+                ForEach(FilenameNamingStyle.allCases, id: \.self) { style in
+                    Text(style.displayName).tag(style)
+                }
+            }
+            Picker("Detected dates", selection: $model.filenameDateStyle) {
+                ForEach(FilenameDateStyle.allCases, id: \.self) { style in
+                    Text(style.displayName).tag(style)
+                }
+            }
+            Picker("Collision suffix", selection: $model.collisionSuffixStyle) {
+                ForEach(CollisionSuffixStyle.allCases, id: \.self) { style in
+                    Text(style.displayName).tag(style)
+                }
+            }
+            Text("Styles affect new plans only. The real extension is always preserved and every result is sanitized locally.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
     }
@@ -193,6 +260,14 @@ private struct AISettingsView: View {
                 Text("Off").tag(AIPrivacyLevel.off)
                 Text("Metadata only").tag(AIPrivacyLevel.metadataOnly)
             }
+            Picker("Proposal quality", selection: $model.aiQualityPreference) {
+                ForEach(AIQualityPreference.allCases, id: \.self) { quality in
+                    Text(quality.displayName).tag(quality)
+                }
+            }
+            Text("Quality changes reasoning effort for the same validated metadata-only capability.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Text("AI is off by default. Sensitive files are always excluded. Metadata requests show their exact data scope before sending.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -227,6 +302,10 @@ private struct UpdateSettingsView: View {
     var body: some View {
         Form {
             LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
+            Picker("Update channel", selection: .constant("Stable")) {
+                Text("Stable").tag("Stable")
+            }
+            .disabled(true)
             Toggle("Automatically check for updates", isOn: .constant(false))
                 .disabled(true)
             Text("Automatic checks remain disabled while release assets are private. External releases require a signed appcast and an accessible feed.")
@@ -234,5 +313,32 @@ private struct UpdateSettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct DiagnosticsPreviewSheet: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Redacted Diagnostics Preview", systemImage: "doc.text.magnifyingglass")
+                .font(.title2.bold())
+            Text("This is the exact JSON that will be written. Review it before exporting.")
+                .foregroundStyle(.secondary)
+            TextEditor(text: .constant(model.diagnosticsPreview))
+                .font(.system(.body, design: .monospaced))
+                .frame(minHeight: 340)
+                .accessibilityIdentifier("diagnostics.preview")
+            HStack {
+                Button("Cancel") { dismiss() }
+                Spacer()
+                Button("Export…") { model.exportDiagnostics() }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("diagnostics.export")
+            }
+        }
+        .padding(24)
+        .frame(width: 680, height: 520)
     }
 }

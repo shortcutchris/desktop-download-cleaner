@@ -33,5 +33,16 @@ final class OpenAIRequestBuilderTests: XCTestCase {
         XCTAssertFalse(input.contains("identity"))
         XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
     }
-}
 
+    func testQualityPreferenceChangesOnlyReasoningEffort() throws {
+        let item = makeItem(filename: "report.pdf")
+        let request = try OpenAIRequestBuilder().makeMetadataRequest(items: [item], quality: .thorough)
+        let payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(request.httpBody)) as? [String: Any]
+        )
+        let reasoning = try XCTUnwrap(payload["reasoning"] as? [String: Any])
+
+        XCTAssertEqual(reasoning["effort"] as? String, "high")
+        XCTAssertEqual(payload["store"] as? Bool, false)
+    }
+}

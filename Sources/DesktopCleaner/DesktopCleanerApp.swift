@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct DesktopCleanerApp: App {
     @StateObject private var model = AppModel()
+    @AppStorage("menuBarEnabled") private var menuBarExtraEnabled = true
 
     init() {
         guard let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
@@ -27,6 +28,12 @@ struct DesktopCleanerApp: App {
                 Button("Approve Safe Proposals") { model.approveSafeItems() }
                     .keyboardShortcut("a", modifiers: [.command, .shift])
                     .disabled(model.plan == nil || model.isBusy)
+                Button("Select All Visible Proposals") { model.selectAllVisibleItems() }
+                    .keyboardShortcut("a", modifiers: [.command, .option])
+                    .disabled(model.plan == nil || model.isBusy)
+                Button("Approve Selected Safe Proposals") { model.approveSelectedItems() }
+                    .keyboardShortcut(.return, modifiers: [.command, .shift])
+                    .disabled(model.selectedPlanItemIDs.isEmpty || model.isBusy)
                 Button("Stage Approved Files") { model.stageApprovedItems() }
                     .keyboardShortcut(.return, modifiers: [.command])
                     .disabled(model.approvedCount == 0 || model.reviewRoot == nil || model.isBusy)
@@ -36,7 +43,7 @@ struct DesktopCleanerApp: App {
             }
         }
 
-        MenuBarExtra {
+        MenuBarExtra(isInserted: $menuBarExtraEnabled) {
             MenuBarView()
                 .environmentObject(model)
         } label: {
@@ -49,7 +56,7 @@ struct DesktopCleanerApp: App {
         Settings {
             SettingsView()
                 .environmentObject(model)
-                .frame(width: 680, height: 520)
+                .frame(width: 780, height: 580)
         }
     }
 }

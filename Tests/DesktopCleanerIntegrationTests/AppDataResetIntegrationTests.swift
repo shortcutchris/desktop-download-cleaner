@@ -19,6 +19,8 @@ final class AppDataResetIntegrationTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.set("move", forKey: "defaultFileOperation")
         defaults.set(14, forKey: "minimumAgeDays")
+        defaults.set("underscored", forKey: "filenameNamingStyle")
+        defaults.set("thorough", forKey: "aiQualityPreference")
         defaults.set(true, forKey: "unrelatedSetting")
         addTeardownBlock { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
 
@@ -29,6 +31,8 @@ final class AppDataResetIntegrationTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: userFile.path))
         XCTAssertNil(defaults.object(forKey: "defaultFileOperation"))
         XCTAssertNil(defaults.object(forKey: "minimumAgeDays"))
+        XCTAssertNil(defaults.object(forKey: "filenameNamingStyle"))
+        XCTAssertNil(defaults.object(forKey: "aiQualityPreference"))
         XCTAssertEqual(defaults.bool(forKey: "unrelatedSetting"), true)
     }
 }

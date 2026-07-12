@@ -102,6 +102,8 @@ final class TransactionIntegrationTests: XCTestCase {
         XCTAssertEqual(retained.state, .retained)
         XCTAssertTrue(FileManager.default.fileExists(atPath: retained.steps[0].destinationPath))
         XCTAssertFalse(FileManager.default.fileExists(atPath: sourceFile.path))
+        let stagedFilePaths = try await executor.existingStagedFileURLs(journalID: retained.id).map(\.path)
+        XCTAssertEqual(stagedFilePaths, [retained.steps[0].destinationPath])
         do {
             _ = try await executor.rollback(journalID: retained.id)
             XCTFail("A retained session must not roll back")

@@ -28,7 +28,13 @@ public actor AppDataResetService {
             "defaultFileOperation",
             "aiPrivacyLevel",
             "notificationsEnabled",
-            "minimumAgeDays"
+            "minimumAgeDays",
+            "menuBarEnabled",
+            "sessionHistoryRetention",
+            "filenameNamingStyle",
+            "filenameDateStyle",
+            "collisionSuffixStyle",
+            "aiQualityPreference"
         ]
         let defaults = defaultsSuiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
         for key in keys { defaults.removeObject(forKey: key) }

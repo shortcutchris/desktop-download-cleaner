@@ -5,15 +5,18 @@ public struct LocalCleanupService: Sendable {
     private let scanner: Scanner
     private let classifier: ClassificationEngine
     private let planner: PlanningEngine
+    private let duplicateDetector: DuplicateDetector
 
     public init(
         scanner: Scanner = Scanner(),
         classifier: ClassificationEngine = ClassificationEngine(),
-        planner: PlanningEngine = PlanningEngine()
+        planner: PlanningEngine = PlanningEngine(),
+        duplicateDetector: DuplicateDetector = DuplicateDetector()
     ) {
         self.scanner = scanner
         self.classifier = classifier
         self.planner = planner
+        self.duplicateDetector = duplicateDetector
     }
 
     public func scanAndPlan(
@@ -23,6 +26,7 @@ public struct LocalCleanupService: Sendable {
         rules: [UserRule] = [],
         exclusions: [ExclusionRule] = [],
         minimumAgeDays: Int = 0,
+        renamePreferences: RenamePreferences = RenamePreferences(),
         existingRelativeDestinations: Set<String> = []
     ) async throws -> CleanupPlan {
         let items = try await scanner.scan(source: source, at: sourceURL)
@@ -51,7 +55,30 @@ public struct LocalCleanupService: Sendable {
                 classifications[item.id] = localClassification
             }
         }
-        return planner.makePlan(
+
+        let duplicateEligibleItems = items.filter { item in
+            guard let classification = classifications[item.id] else { return false }
+            return !classification.isExcluded && !classification.isSensitive
+        }
+        let duplicateOriginals = await duplicateDetector.duplicateOriginals(
+            among: duplicateEligibleItems,
+            beneath: sourceURL
+        )
+        let itemsByID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
+        for (duplicateID, originalID) in duplicateOriginals {
+            guard let original = itemsByID[originalID] else { continue }
+            classifications[duplicateID] = Classification(
+                category: .duplicates,
+                confidence: .high,
+                reason: "Content matches earlier item \(original.filename)"
+            )
+            suggestedBasenames[duplicateID] = itemsByID[duplicateID]?.basename
+        }
+
+        let activePlanner = renamePreferences == RenamePreferences()
+            ? planner
+            : PlanningEngine(sanitizer: FilenameSanitizer(preferences: renamePreferences))
+        return activePlanner.makePlan(
             items: items,
             classifications: classifications,
             suggestedBasenames: suggestedBasenames,

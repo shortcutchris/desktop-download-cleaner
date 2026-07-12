@@ -20,3 +20,11 @@ Sensitive files are excluded. File contents, absolute paths, text or visual prev
 The user supplies their own OpenAI API key. It is stored only in macOS Keychain and is never written to JSON, plist, UserDefaults, logs, source code, or repository files.
 
 Text and visual preview transmission remain disabled until each capability has separate extraction limits, per-file eligibility, exact preview UI, and dedicated tests. This is a deliberate safety boundary, not a hidden fallback.
+
+## Local duplicate detection
+
+Duplicate detection groups eligible files by metadata size and hashes only groups that could actually match. Hashing happens locally beneath the authorized source, skips sensitive, excluded, alias, symlink, and package items, and neither stores nor transmits hashes or contents.
+
+## Diagnostics export
+
+The diagnostics report is built from aggregate counts and non-sensitive settings rather than from source, plan, or journal objects. The app shows the exact JSON before saving it. Filenames, paths, file contents, API-key values, model requests/responses, and failure strings are structurally absent.

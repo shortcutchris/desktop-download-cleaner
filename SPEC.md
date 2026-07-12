@@ -205,12 +205,12 @@ The user enters an OpenAI API key in Settings. Store it only in macOS Keychain. 
 
 ### Privacy levels
 
-The user chooses an explicit maximum:
+The user chooses an explicit maximum. Version 1.0 ships the first two tested levels; the content-bearing levels remain visible roadmap capabilities but unavailable until their separate consent and extraction safeguards are implemented:
 
 1. Off: no AI requests.
 2. Metadata only: filename, extension, type, size range, and dates.
-3. Text preview: limited extracted text for individually eligible files.
-4. Visual preview: a reduced image or OCR for individually eligible images and PDFs.
+3. Text preview (post-1.0 gated capability): limited extracted text for individually eligible files.
+4. Visual preview (post-1.0 gated capability): a reduced image or OCR for individually eligible images and PDFs.
 
 The batch review must show which files would transmit which data before the request begins. Sensitive files remain excluded regardless of the batch setting unless a future feature introduces deliberate per-file override.
 
@@ -273,4 +273,3 @@ The menu bar is a lightweight entry point, not the complete application. It disp
 - API keys are Keychain-backed and absent from logs and repository contents.
 - AI output is schema-validated and path-sanitized.
 - Full test suite, signed build, notarized release, Sparkle update, and launch verification are documented and repeatable.
-

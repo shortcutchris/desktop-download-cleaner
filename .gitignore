@@ -1,0 +1,37 @@
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+
+# Secrets and signing
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.pem
+*.key
+*.cer
+*.provisionprofile
+*.mobileprovision
+sparkle_private_key*
+Secrets.xcconfig
+
+# Release artifacts
+artifacts/
+dist/
+*.dmg
+*.zip
+*.app
+*.pkg

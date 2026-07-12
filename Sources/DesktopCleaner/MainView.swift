@@ -23,7 +23,7 @@ struct MainView: View {
         )) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
         } message: {
-            Text(model.errorMessage ?? "Unknown error")
+            Text(model.errorMessage ?? model.localized("Unknown error"))
         }
         .sheet(isPresented: $model.showsAIRequestPreview) {
             AIRequestPreviewSheet()
@@ -133,7 +133,7 @@ private struct WorkspaceView: View {
                     Button("Reject Selected Items", role: .destructive) { model.rejectSelectedItems() }
                         .disabled(model.selectedPlanItemIDs.isEmpty)
                 } label: {
-                    Label("Selected \(model.selectedPlanItemIDs.count)", systemImage: "checklist")
+                    Label(model.localized("Selected %@", String(model.selectedPlanItemIDs.count)), systemImage: "checklist")
                 }
                 .disabled(model.plan == nil)
                 .accessibilityIdentifier("toolbar.selection")
@@ -141,7 +141,7 @@ private struct WorkspaceView: View {
                 Menu {
                     Picker("Sort proposals", selection: $model.planSortOption) {
                         ForEach(PlanSortOption.allCases, id: \.self) { option in
-                            Text(option.displayName).tag(option)
+                            Text(model.localized(option.displayName)).tag(option)
                         }
                     }
                 } label: {
@@ -169,7 +169,7 @@ private struct WorkspaceView: View {
                 }
 
                 Button { model.stageApprovedItems() } label: {
-                    Label("Stage \(model.approvedCount)", systemImage: "shippingbox.fill")
+                    Label(model.localized("Stage %@", String(model.approvedCount)), systemImage: "shippingbox.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.approvedCount == 0 || model.reviewRoot == nil || model.isBusy)
@@ -187,7 +187,10 @@ private struct AIRequestPreviewSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             Label("Review OpenAI Request", systemImage: "eye.shield.fill")
                 .font(.title2.bold())
-            Text("\(model.aiEligibleItems.count) items will send metadata only. Sensitive files are excluded.")
+            Text(model.localized(
+                "%@ items will send metadata only. Sensitive files are excluded.",
+                String(model.aiEligibleItems.count)
+            ))
                 .font(.headline)
             GroupBox("Fields sent for each eligible item") {
                 VStack(alignment: .leading, spacing: 8) {
@@ -217,7 +220,10 @@ private struct AIRequestPreviewSheet: View {
                 .frame(height: min(CGFloat(model.aiEligibleItems.count * 25), 125))
             }
             Label(
-                "Estimated input: about \(model.estimatedAIInputTokens) tokens. Actual API usage varies.",
+                model.localized(
+                    "Estimated input: about %@ tokens. Actual API usage varies.",
+                    String(model.estimatedAIInputTokens)
+                ),
                 systemImage: "gauge.with.dots.needle.33percent"
             )
             .font(.callout)
@@ -291,7 +297,7 @@ private struct SidebarView: View {
                             VStack(alignment: .leading) {
                                 Text(session.sessionDirectoryName)
                                     .lineLimit(1)
-                                Text("\(session.itemCount) items")
+                                Text(model.localized("%@ items", String(session.itemCount)))
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -343,7 +349,9 @@ private struct PlanListView: View {
                 } description: {
                     Text("Select a source and create a read-only cleanup plan.")
                 } actions: {
-                    Button("Scan \(model.selectedSource?.displayName ?? "Source")") { model.scanSelectedSource() }
+                    Button(model.localized("Scan %@", model.selectedSource?.displayName ?? model.localized("Source"))) {
+                        model.scanSelectedSource()
+                    }
                         .buttonStyle(.borderedProminent)
                 }
             } else if model.filteredPlanItems.isEmpty {
@@ -360,7 +368,7 @@ private struct PlanListView: View {
                                 }
                             } header: {
                                 HStack {
-                                    Label(category.folderName, systemImage: category.iconName)
+                                    Label(model.localizedCategory(category), systemImage: category.iconName)
                                     Spacer()
                                     Text("\(items.count)")
                                         .foregroundStyle(.tertiary)
@@ -372,7 +380,9 @@ private struct PlanListView: View {
                 .listStyle(.inset)
             }
         }
-        .navigationTitle(model.plan.map { "Cleanup Plan · \($0.items.count)" } ?? "Cleanup Plan")
+        .navigationTitle(model.plan.map {
+            model.localized("Cleanup Plan · %@", String($0.items.count))
+        } ?? model.localized("Cleanup Plan"))
         .searchable(text: $model.searchText, prompt: "Search proposals")
     }
 }
@@ -389,7 +399,9 @@ private struct PlanRow: View {
                     .foregroundStyle(item.approvalState == .approved ? Color.accentColor : .secondary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(item.approvalState == .approved ? "Approved" : "Not approved")
+            .accessibilityLabel(item.approvalState == .approved
+                ? model.localized("Approved")
+                : model.localized("Not approved"))
             .accessibilityIdentifier("plan.approval.\(item.id)")
 
             ZStack {
@@ -404,7 +416,9 @@ private struct PlanRow: View {
                 Text(item.proposedFilename)
                     .fontWeight(.medium)
                     .lineLimit(1)
-                Text(item.scannedItem.filename == item.proposedFilename ? item.relativeDestination : "from \(item.scannedItem.filename)")
+                Text(item.scannedItem.filename == item.proposedFilename
+                    ? item.relativeDestination
+                    : model.localized("from %@", item.scannedItem.filename))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -452,14 +466,14 @@ private struct InspectorView: View {
                             set: { model.updateSelectedCategory($0) }
                         )) {
                             ForEach(ItemCategory.allCases, id: \.self) { category in
-                                Label(category.folderName, systemImage: category.iconName).tag(category)
+                                Label(model.localizedCategory(category), systemImage: category.iconName).tag(category)
                             }
                         }
                         .labelsHidden()
                     }
 
                     InspectorSection(title: "Why this proposal") {
-                        Text(item.classification.reason)
+                        Text(model.localizedClassificationReason(item.classification.reason))
                         ConfidenceBadge(confidence: item.classification.confidence, sensitive: item.classification.isSensitive)
                     }
 
@@ -467,7 +481,9 @@ private struct InspectorView: View {
                         LabeledContent("Destination", value: item.relativeDestination)
                         LabeledContent(
                             "Proposal source",
-                            value: item.classification.reason.hasPrefix("AI:") ? "OpenAI · metadata only" : "Local deterministic logic"
+                            value: item.classification.reason.hasPrefix("AI:")
+                                ? model.localized("OpenAI · metadata only")
+                                : model.localized("Local deterministic logic")
                         )
                         if item.hadCollision {
                             Label("Collision resolved without overwriting", systemImage: "exclamationmark.shield.fill")
@@ -513,7 +529,11 @@ private struct SessionInspector: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.tint)
             Text(session.sessionDirectoryName).font(.title2.bold())
-            Text("\(session.itemCount) items · \(session.state.rawValue)")
+            Text(model.localized(
+                "%@ items · %@",
+                String(session.itemCount),
+                model.localizedTransactionState(session.state)
+            ))
                 .foregroundStyle(.secondary)
             Button("Reveal in Finder") { model.reveal(session) }
             if session.state == .staged || session.state == .failed {
@@ -534,7 +554,7 @@ private struct SessionInspector: View {
                     Label(url.lastPathComponent, systemImage: "doc.fill")
                         .lineLimit(1)
                         .draggable(url)
-                        .accessibilityLabel("Drag organized file \(url.lastPathComponent)")
+                        .accessibilityLabel(model.localized("Drag organized file %@", url.lastPathComponent))
                 }
                 .frame(minHeight: 120, maxHeight: 240)
             }
@@ -553,7 +573,7 @@ private struct MultiSelectionInspector: View {
             Image(systemName: "checklist.checked")
                 .font(.system(size: 48))
                 .foregroundStyle(.tint)
-            Text("\(items.count) proposals selected")
+            Text(model.localized("%@ proposals selected", String(items.count)))
                 .font(.title2.bold())
             Text("Low-confidence and sensitive files remain unapproved by batch actions.")
                 .foregroundStyle(.secondary)
@@ -568,12 +588,13 @@ private struct MultiSelectionInspector: View {
 }
 
 private struct InspectorSection<Content: View>: View {
+    @EnvironmentObject private var model: AppModel
     let title: String
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(title).font(.headline)
+            Text(model.localized(title)).font(.headline)
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -618,11 +639,12 @@ private struct FilenameEditor: View {
 }
 
 private struct ConfidenceBadge: View {
+    @EnvironmentObject private var model: AppModel
     let confidence: ClassificationConfidence
     let sensitive: Bool
 
     var body: some View {
-        Text(sensitive ? "Sensitive" : confidence.rawValue.capitalized)
+        Text(model.localized(sensitive ? "Sensitive" : confidence.rawValue.capitalized))
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -640,7 +662,11 @@ private struct StatusBar: View {
             Text(model.statusMessage)
             Spacer()
             if model.plan != nil {
-                Text("\(model.approvedCount) approved · \(model.pendingCount) pending")
+                Text(model.localized(
+                    "%@ approved · %@ pending",
+                    String(model.approvedCount),
+                    String(model.pendingCount)
+                ))
             }
         }
         .font(.caption)
@@ -663,7 +689,10 @@ struct MenuBarView: View {
             Divider()
             Button("Open Current Plan") { model.showMainWindow() }
                 .disabled(model.plan == nil)
-            Button("Scan \(model.selectedSource?.displayName ?? "Selected Source")") { model.scanSelectedSource() }
+            Button(model.localized(
+                "Scan %@",
+                model.selectedSource?.displayName ?? model.localized("Selected Source")
+            )) { model.scanSelectedSource() }
                 .disabled(model.selectedSourceID == nil || model.isBusy)
             if let session = model.sessions.first {
                 Button("Reveal Latest Session") { model.reveal(session) }

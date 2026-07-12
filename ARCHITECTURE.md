@@ -53,6 +53,10 @@ Stores and removes the user-owned OpenAI key. Exposes no logging representation.
 
 Wraps Sparkle so update behavior remains separate from application state.
 
+### Localization
+
+The application target owns a small `AppLanguage` manifest and localized resource bundles. SwiftUI receives the selected locale at each scene root, while dynamic status, error, notification, and domain-display strings pass through the same bundle-backed formatter. Persisted enums, category folder names, user-authored rules, filenames, and transaction paths remain language-neutral or unchanged, so switching the interface language never mutates cleanup data. A new language requires one manifest entry and one `<code>.lproj/Localizable.strings` resource.
+
 ## Core models
 
 ```text
@@ -118,4 +122,3 @@ Use structured local logging with privacy annotations. File paths, filenames, ex
 ## Shared future package
 
 The Keychain, networking, OpenAI Responses client, error mapping, and update conventions may later be extracted into a separate local Swift package shared with Skill Notes. Do not couple the repositories before both applications have stable requirements.
-

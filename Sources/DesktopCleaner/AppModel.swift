@@ -44,6 +44,17 @@ final class AppModel: ObservableObject {
     @Published var isAIRequestInFlight = false
     @Published var statusMessage = "Ready"
     @Published var errorMessage: String?
+    @Published var appLanguage: AppLanguage {
+        didSet {
+            if !isResettingAppData {
+                UserDefaults.standard.set(appLanguage.rawValue, forKey: "appLanguage")
+            }
+            statusMessage = localized("Ready")
+            aiConnectionStatus = hasAPIKey
+                ? localized("API key stored securely in Keychain")
+                : localized("No API key stored")
+        }
+    }
     @Published var operation: FileOperation {
         didSet {
             if !isResettingAppData {
@@ -133,8 +144,15 @@ final class AppModel: ObservableObject {
     private var diagnosticsExportData: Data?
 
     init() {
-        let isUITesting = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        let processInfo = ProcessInfo.processInfo
+        let isUITesting = processInfo.arguments.contains("--ui-testing")
+            || processInfo.environment["DESKTOP_CLEANER_UI_TESTING"] == "1"
         updateService = UpdateService(isEnabled: !isUITesting)
+        appLanguage = AppLanguage(
+            rawValue: processInfo.environment["DESKTOP_CLEANER_LANGUAGE"]
+                ?? UserDefaults.standard.string(forKey: "appLanguage")
+                ?? ""
+        ) ?? .system
         operation = FileOperation(rawValue: UserDefaults.standard.string(forKey: "defaultFileOperation") ?? "") ?? .move
         aiPrivacyLevel = AIPrivacyLevel(rawValue: UserDefaults.standard.string(forKey: "aiPrivacyLevel") ?? "") ?? .off
         launchAtLogin = launchAtLoginService.isEnabled
@@ -157,6 +175,8 @@ final class AppModel: ObservableObject {
         aiQualityPreference = AIQualityPreference(
             rawValue: UserDefaults.standard.string(forKey: "aiQualityPreference") ?? ""
         ) ?? .fast
+        statusMessage = localized("Ready")
+        aiConnectionStatus = localized("No API key stored")
         if !isUITesting {
             Task { await loadPersistedState() }
         }
@@ -185,13 +205,40 @@ final class AppModel: ObservableObject {
             collisionSuffixStyle: collisionSuffixStyle
         )
     }
+    func localized(_ key: String, _ arguments: CVarArg...) -> String {
+        L10n.string(key, language: appLanguage, arguments: arguments)
+    }
+
+    func localizedCategory(_ category: ItemCategory) -> String {
+        localized(category.folderName)
+    }
+
+    func localizedClassificationReason(_ reason: String) -> String {
+        let exclusionPrefix = "Matches exclusion rule "
+        if reason.hasPrefix(exclusionPrefix) {
+            return localized("Matches exclusion rule %@", String(reason.dropFirst(exclusionPrefix.count)))
+        }
+        let rulePrefix = "Matched user rule: "
+        if reason.hasPrefix(rulePrefix) {
+            return localized("Matched user rule: %@", String(reason.dropFirst(rulePrefix.count)))
+        }
+        let aiPrefix = "AI: "
+        if reason.hasPrefix(aiPrefix) {
+            return localized("AI: %@", String(reason.dropFirst(aiPrefix.count)))
+        }
+        return localized(reason)
+    }
+
+    func localizedTransactionState(_ state: TransactionState) -> String {
+        localized(state.rawValue.capitalized)
+    }
     var filteredPlanItems: [PlanItem] {
         guard var items = plan?.items else { return [] }
         if !searchText.isEmpty {
             items = items.filter {
                 $0.scannedItem.filename.localizedCaseInsensitiveContains(searchText)
                     || $0.proposedFilename.localizedCaseInsensitiveContains(searchText)
-                    || $0.classification.category.folderName.localizedCaseInsensitiveContains(searchText)
+                    || localizedCategory($0.classification.category).localizedCaseInsensitiveContains(searchText)
             }
         }
         return items.sorted { lhs, rhs in
@@ -216,7 +263,7 @@ final class AppModel: ObservableObject {
 
     func chooseSourceFolder(startingAt suggestedURL: URL? = nil) {
         guard let url = chooseFolder(
-            prompt: "Choose a folder to organize",
+            prompt: localized("Choose a folder to organize"),
             startingAt: suggestedURL
         ) else { return }
         Task {
@@ -224,7 +271,7 @@ final class AppModel: ObservableObject {
                 let folder = try await folderAccess.authorize(url, kind: .source)
                 sources.append(folder)
                 selectedSourceID = folder.id
-                statusMessage = "Source added"
+                statusMessage = localized("Source added")
                 if reviewRoot == nil { chooseReviewRoot() }
             } catch { present(error) }
         }
@@ -239,18 +286,18 @@ final class AppModel: ObservableObject {
     }
 
     func chooseReviewRoot() {
-        guard let url = chooseFolder(prompt: "Choose a visible review folder") else { return }
+        guard let url = chooseFolder(prompt: localized("Choose a visible review folder")) else { return }
         Task {
             do {
                 let folder = try await folderAccess.authorize(url, kind: .reviewRoot)
                 reviewRoot = folder
-                statusMessage = "Review folder: \(folder.displayName)"
+                statusMessage = localized("Review folder: %@", folder.displayName)
             } catch { present(error) }
         }
     }
 
     func useDemoFiles() {
-        setBusy("Preparing safe demo files…")
+        setBusy(localized("Preparing safe demo files…"))
         Task {
             do {
                 let fixture = try DemoFixtureService().create()
@@ -259,10 +306,10 @@ final class AppModel: ObservableObject {
                 directURLs[fixture.source.id] = fixture.sourceURL
                 directReviewRootURL = fixture.reviewRootURL
                 reviewRoot = SourceFolder(displayName: "Tidy Review", kind: .reviewRoot)
-                finishBusy("Demo ready")
+                finishBusy(localized("Demo ready"))
                 scanSelectedSource()
             } catch {
-                finishBusy("Demo failed")
+                finishBusy(localized("Demo failed"))
                 present(error)
             }
         }
@@ -270,10 +317,10 @@ final class AppModel: ObservableObject {
 
     func scanSelectedSource() {
         guard let source = selectedSource, source.isEnabled else {
-            statusMessage = "Enable the selected source before scanning"
+            statusMessage = localized("Enable the selected source before scanning")
             return
         }
-        setBusy("Scanning \(source.displayName)…")
+        setBusy(localized("Scanning %@…", source.displayName))
         Task {
             do {
                 let sourceURL = try await accessibleURL(for: source)
@@ -290,9 +337,9 @@ final class AppModel: ObservableObject {
                 plan = newPlan
                 selectedPlanItemIDs = Set(newPlan.items.first.map { [$0.id] } ?? [])
                 persistCurrentPlan()
-                finishBusy("\(newPlan.items.count) proposals ready")
+                finishBusy(localized("%@ proposals ready", String(newPlan.items.count)))
             } catch {
-                finishBusy("Scan failed")
+                finishBusy(localized("Scan failed"))
                 present(error)
             }
         }
@@ -318,7 +365,7 @@ final class AppModel: ObservableObject {
 
     func selectAllVisibleItems() {
         selectedPlanItemIDs = Set(filteredPlanItems.map(\.id))
-        statusMessage = "Selected \(selectedPlanItemIDs.count) visible proposals"
+        statusMessage = localized("Selected %@ visible proposals", String(selectedPlanItemIDs.count))
     }
 
     func approveSelectedItems() {
@@ -332,7 +379,7 @@ final class AppModel: ObservableObject {
         }
         plan = current
         persistCurrentPlan()
-        statusMessage = "Approved \(approved) selected safe proposals"
+        statusMessage = localized("Approved %@ selected safe proposals", String(approved))
     }
 
     func rejectSelectedItems() {
@@ -342,7 +389,7 @@ final class AppModel: ObservableObject {
         }
         plan = current
         persistCurrentPlan()
-        statusMessage = "Rejected \(selectedPlanItemIDs.count) selected proposals"
+        statusMessage = localized("Rejected %@ selected proposals", String(selectedPlanItemIDs.count))
     }
 
     func rejectSelected() {
@@ -385,7 +432,7 @@ final class AppModel: ObservableObject {
 
     func stageApprovedItems() {
         guard let currentPlan = plan, approvedCount > 0, let source = selectedSource else { return }
-        setBusy("Preflighting \(approvedCount) approved items…")
+        setBusy(localized("Preflighting %@ approved items…", String(approvedCount)))
         Task {
             do {
                 let sourceURL = try await accessibleURL(for: source)
@@ -409,16 +456,20 @@ final class AppModel: ObservableObject {
                 planPersistenceTask?.cancel()
                 try await planStore.clear()
                 selectSession(session)
-                finishBusy("Staged \(journal.steps.count) items safely")
+                finishBusy(localized("Staged %@ items safely", String(journal.steps.count)))
                 if notificationsEnabled {
                     _ = try? await notificationService.requestAuthorization()
-                    try? await notificationService.notifyStagingComplete(
-                        itemCount: journal.steps.count,
-                        sessionName: currentPlan.sessionDirectoryName
+                    try? await notificationService.notify(
+                        title: localized("Cleanup session staged"),
+                        body: localized(
+                            "%@ items are ready in %@.",
+                            String(journal.steps.count),
+                            currentPlan.sessionDirectoryName
+                        )
                     )
                 }
             } catch {
-                finishBusy("Staging failed")
+                finishBusy(localized("Staging failed"))
                 present(error)
             }
         }
@@ -432,7 +483,7 @@ final class AppModel: ObservableObject {
                 try await openAIService.saveAPIKey(key)
                 apiKeyDraft = ""
                 hasAPIKey = true
-                aiConnectionStatus = "API key stored securely in Keychain"
+                aiConnectionStatus = localized("API key stored securely in Keychain")
             } catch { present(error) }
         }
     }
@@ -444,7 +495,7 @@ final class AppModel: ObservableObject {
                 apiKeyDraft = ""
                 hasAPIKey = false
                 aiPrivacyLevel = .off
-                aiConnectionStatus = "No API key stored"
+                aiConnectionStatus = localized("No API key stored")
             } catch { present(error) }
         }
     }
@@ -457,15 +508,15 @@ final class AppModel: ObservableObject {
     }
 
     func testAIConnection() {
-        setBusy("Testing OpenAI connection…")
+        setBusy(localized("Testing OpenAI connection…"))
         Task {
             do {
                 try await openAIService.testConnection()
-                aiConnectionStatus = "Connection successful"
-                finishBusy("OpenAI connection ready")
+                aiConnectionStatus = localized("Connection successful")
+                finishBusy(localized("OpenAI connection ready"))
             } catch {
-                aiConnectionStatus = "Connection failed"
-                finishBusy("OpenAI connection failed")
+                aiConnectionStatus = localized("Connection failed")
+                finishBusy(localized("OpenAI connection failed"))
                 present(error)
             }
         }
@@ -481,21 +532,22 @@ final class AppModel: ObservableObject {
         let eligible = aiEligibleItems.map(\.scannedItem)
         showsAIRequestPreview = false
         isAIRequestInFlight = true
-        setBusy("Requesting AI metadata proposals for \(eligible.count) items…")
+        setBusy(localized("Requesting AI metadata proposals for %@ items…", String(eligible.count)))
         aiRequestTask = Task { [weak self] in
             guard let self else { return }
             do {
                 let proposals = try await openAIService.proposeMetadata(
                     for: eligible,
-                    quality: aiQualityPreference
+                    quality: aiQualityPreference,
+                    responseLanguage: appLanguage.aiLanguageName
                 )
                 try Task.checkCancellation()
                 applyAIProposals(proposals)
-                finishBusy("Applied \(proposals.count) validated AI proposals")
+                finishBusy(localized("Applied %@ validated AI proposals", String(proposals.count)))
             } catch is CancellationError {
-                finishBusy("AI request cancelled; local plan preserved")
+                finishBusy(localized("AI request cancelled; local plan preserved"))
             } catch {
-                finishBusy("AI proposals unavailable; local plan preserved")
+                finishBusy(localized("AI proposals unavailable; local plan preserved"))
                 present(error)
             }
             isAIRequestInFlight = false
@@ -506,11 +558,11 @@ final class AppModel: ObservableObject {
     func cancelAIRequest() {
         guard isAIRequestInFlight else { return }
         aiRequestTask?.cancel()
-        statusMessage = "Cancelling AI request…"
+        statusMessage = localized("Cancelling AI request…")
     }
 
     func undo(_ session: CleanupSession) {
-        setBusy("Undoing \(session.itemCount) items…")
+        setBusy(localized("Undoing %@ items…", String(session.itemCount)))
         Task {
             do {
                 try await prepareSecurityScopedAccessForRollback()
@@ -520,32 +572,32 @@ final class AppModel: ObservableObject {
                     sessions[index].state = journal.state
                 }
                 if selectedSessionID == session.id { selectedSessionFileURLs = [] }
-                finishBusy("Session restored")
+                finishBusy(localized("Session restored"))
             } catch {
-                finishBusy("Undo needs attention")
+                finishBusy(localized("Undo needs attention"))
                 present(error)
             }
         }
     }
 
     func recover(_ journal: TransactionJournal) {
-        setBusy("Recovering interrupted session…")
+        setBusy(localized("Recovering interrupted session…"))
         Task {
             do {
                 try await prepareSecurityScopedAccessForRollback()
                 let recovered = try await transactionExecutor.rollback(journalID: journal.id)
                 recoverableJournals.removeAll { $0.id == journal.id }
                 try await sessionStore.updateState(journalID: journal.id, state: recovered.state)
-                finishBusy("Interrupted session rolled back safely")
+                finishBusy(localized("Interrupted session rolled back safely"))
             } catch {
-                finishBusy("Recovery needs attention")
+                finishBusy(localized("Recovery needs attention"))
                 present(error)
             }
         }
     }
 
     func retain(_ session: CleanupSession) {
-        setBusy("Keeping organized session as final…")
+        setBusy(localized("Keeping organized session as final…"))
         Task {
             do {
                 let journal = try await transactionExecutor.retain(journalID: session.journalID)
@@ -553,9 +605,9 @@ final class AppModel: ObservableObject {
                 if let index = sessions.firstIndex(where: { $0.id == session.id }) {
                     sessions[index].state = journal.state
                 }
-                finishBusy("Session kept as final")
+                finishBusy(localized("Session kept as final"))
             } catch {
-                finishBusy("Session could not be finalized")
+                finishBusy(localized("Session could not be finalized"))
                 present(error)
             }
         }
@@ -600,7 +652,7 @@ final class AppModel: ObservableObject {
 
     func addRule() {
         let rule = UserRule(
-            name: "New rule",
+            name: localized("New rule"),
             order: rules.count,
             condition: RuleCondition(kind: .filename, pattern: "*"),
             category: .documents
@@ -612,13 +664,13 @@ final class AppModel: ObservableObject {
     func createRuleFromSelectedItem() {
         guard let item = selectedPlanItem else { return }
         rules.append(UserRule(
-            name: "Organize \(item.scannedItem.filename)",
+            name: localized("Organize %@", item.scannedItem.filename),
             order: rules.count,
             condition: RuleCondition(kind: .filename, pattern: item.scannedItem.filename),
             category: item.classification.category
         ))
         saveRules()
-        statusMessage = "Rule created — review it in Settings"
+        statusMessage = localized("Rule created — review it in Settings")
     }
 
     func addExclusion() {
@@ -635,7 +687,7 @@ final class AppModel: ObservableObject {
         plan?.items.removeAll { $0.id == item.id }
         selectedPlanItemIDs = Set(plan?.items.first.map { [$0.id] } ?? [])
         persistCurrentPlan()
-        statusMessage = "Excluded \(item.scannedItem.filename) from future plans"
+        statusMessage = localized("Excluded %@ from future plans", item.scannedItem.filename)
     }
 
     func deleteExclusions(at offsets: IndexSet) {
@@ -682,14 +734,14 @@ final class AppModel: ObservableObject {
     func exportDiagnostics() {
         guard let data = diagnosticsExportData else { return }
         let panel = NSSavePanel()
-        panel.title = "Export Redacted Desktop Cleaner Diagnostics"
+        panel.title = localized("Export Redacted Desktop Cleaner Diagnostics")
         panel.nameFieldStringValue = "Desktop Cleaner Diagnostics.json"
         panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try diagnosticsExportService.export(data, to: url)
             showsDiagnosticsPreview = false
-            statusMessage = "Redacted diagnostics exported"
+            statusMessage = localized("Redacted diagnostics exported")
         } catch { present(error) }
     }
 
@@ -727,18 +779,19 @@ final class AppModel: ObservableObject {
                 filenameDateStyle = .preserve
                 collisionSuffixStyle = .enDash
                 aiQualityPreference = .fast
+                appLanguage = .system
                 launchAtLogin = false
                 setAutomaticallyChecksForUpdates(false)
-                aiConnectionStatus = "No API key stored"
-                statusMessage = "All app data deleted; user files were untouched"
+                aiConnectionStatus = localized("No API key stored")
+                statusMessage = localized("All app data deleted; user files were untouched")
             } catch { present(error) }
         }
     }
 
     func checkForUpdates() {
         statusMessage = updateService.checkForUpdates()
-            ? "Checking for updates…"
-            : "Update checker is starting; try again in a moment"
+            ? localized("Checking for updates…")
+            : localized("Update checker is starting; try again in a moment")
     }
 
     func setAutomaticallyChecksForUpdates(_ enabled: Bool) {
@@ -767,7 +820,7 @@ final class AppModel: ObservableObject {
 
     func importRules() {
         let panel = NSOpenPanel()
-        panel.title = "Import Desktop Cleaner Rules"
+        panel.title = localized("Import Desktop Cleaner Rules")
         panel.allowedContentTypes = [.json]
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
@@ -776,14 +829,14 @@ final class AppModel: ObservableObject {
             do {
                 rules = try await ruleStore.importRules(from: url)
                 saveRules()
-                statusMessage = "Imported \(rules.count) rules"
+                statusMessage = localized("Imported %@ rules", String(rules.count))
             } catch { present(error) }
         }
     }
 
     func exportRules() {
         let panel = NSSavePanel()
-        panel.title = "Export Desktop Cleaner Rules"
+        panel.title = localized("Export Desktop Cleaner Rules")
         panel.nameFieldStringValue = "Desktop Cleaner Rules.json"
         panel.allowedContentTypes = [.json]
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -791,7 +844,7 @@ final class AppModel: ObservableObject {
         Task {
             do {
                 try await ruleStore.export(current, to: url)
-                statusMessage = "Rules exported"
+                statusMessage = localized("Rules exported")
             } catch { present(error) }
         }
     }
@@ -826,11 +879,13 @@ final class AppModel: ObservableObject {
             rules = try await ruleStore.load()
             exclusions = try await exclusionStore.load()
             hasAPIKey = try await openAIService.hasAPIKey()
-            aiConnectionStatus = hasAPIKey ? "API key stored securely in Keychain" : "No API key stored"
+            aiConnectionStatus = hasAPIKey
+                ? localized("API key stored securely in Keychain")
+                : localized("No API key stored")
             let recoverable = try await transactionExecutor.recoverableJournals()
             recoverableJournals = recoverable
             if !recoverable.isEmpty {
-                statusMessage = "\(recoverable.count) session(s) need recovery"
+                statusMessage = localized("%@ session(s) need recovery", String(recoverable.count))
             }
         } catch { present(error) }
     }
@@ -887,7 +942,7 @@ final class AppModel: ObservableObject {
     private func chooseFolder(prompt: String, startingAt suggestedURL: URL? = nil) -> URL? {
         let panel = NSOpenPanel()
         panel.title = prompt
-        panel.prompt = "Choose"
+        panel.prompt = localized("Choose")
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
@@ -908,9 +963,24 @@ final class AppModel: ObservableObject {
 
     private func present(_ error: Error) {
         if let urlError = error as? URLError {
-            errorMessage = "Network connection failed: \(urlError.localizedDescription)"
+            errorMessage = localized("Network connection failed: %@", urlError.localizedDescription)
+        } else if let openAIError = error as? OpenAIServiceError {
+            switch openAIError {
+            case .missingAPIKey:
+                errorMessage = localized("No OpenAI API key is stored.")
+            case .invalidResponse:
+                errorMessage = localized("OpenAI returned an unreadable response. The local plan was preserved.")
+            case .refusal(let message):
+                errorMessage = localized("OpenAI declined the request: %@", message)
+            case .requestFailed(let statusCode, let message):
+                errorMessage = localized(
+                    "OpenAI request failed (%@): %@",
+                    String(statusCode),
+                    message
+                )
+            }
         } else {
-            errorMessage = error.localizedDescription
+            errorMessage = localized(error.localizedDescription)
         }
     }
 

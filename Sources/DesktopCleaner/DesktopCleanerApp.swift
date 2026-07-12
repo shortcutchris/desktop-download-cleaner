@@ -16,33 +16,34 @@ struct DesktopCleanerApp: App {
         WindowGroup {
             MainView()
                 .environmentObject(model)
+                .environment(\.locale, model.appLanguage.locale)
                 .frame(minWidth: 980, minHeight: 640)
         }
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Add Source Folder…") { model.chooseSourceFolder() }
+                Button(model.localized("Add Source Folder…")) { model.chooseSourceFolder() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
-                Button("Scan Selected Source") { model.scanSelectedSource() }
+                Button(model.localized("Scan Selected Source")) { model.scanSelectedSource() }
                     .keyboardShortcut("r", modifiers: [.command])
                     .disabled(model.selectedSourceID == nil || model.isBusy)
-                Button("Approve Safe Proposals") { model.approveSafeItems() }
+                Button(model.localized("Approve Safe Proposals")) { model.approveSafeItems() }
                     .keyboardShortcut("a", modifiers: [.command, .shift])
                     .disabled(model.plan == nil || model.isBusy)
-                Button("Select All Visible Proposals") { model.selectAllVisibleItems() }
+                Button(model.localized("Select All Visible Proposals")) { model.selectAllVisibleItems() }
                     .keyboardShortcut("a", modifiers: [.command, .option])
                     .disabled(model.plan == nil || model.isBusy)
-                Button("Approve Selected Safe Proposals") { model.approveSelectedItems() }
+                Button(model.localized("Approve Selected Safe Proposals")) { model.approveSelectedItems() }
                     .keyboardShortcut(.return, modifiers: [.command, .shift])
                     .disabled(model.selectedPlanItemIDs.isEmpty || model.isBusy)
-                Button("Stage Approved Files") { model.stageApprovedItems() }
+                Button(model.localized("Stage Approved Files")) { model.stageApprovedItems() }
                     .keyboardShortcut(.return, modifiers: [.command])
                     .disabled(model.approvedCount == 0 || model.reviewRoot == nil || model.isBusy)
-                Button("Quick Look Selected Proposal") { model.quickLookSelected() }
+                Button(model.localized("Quick Look Selected Proposal")) { model.quickLookSelected() }
                     .keyboardShortcut(.space, modifiers: [])
                     .disabled(model.selectedPlanItem == nil)
             }
             CommandGroup(after: .appInfo) {
-                Button("Check for Updates…") { model.checkForUpdates() }
+                Button(model.localized("Check for Updates…")) { model.checkForUpdates() }
                     .disabled(!model.canCheckForUpdates)
             }
         }
@@ -50,9 +51,12 @@ struct DesktopCleanerApp: App {
         MenuBarExtra(isInserted: $menuBarExtraEnabled) {
             MenuBarView()
                 .environmentObject(model)
+                .environment(\.locale, model.appLanguage.locale)
         } label: {
             Label(
-                model.pendingCount == 0 ? "Desktop Cleaner" : "\(model.pendingCount) pending",
+                model.pendingCount == 0
+                    ? model.localized("Desktop Cleaner")
+                    : model.localized("%@ pending", String(model.pendingCount)),
                 systemImage: model.pendingCount == 0 ? "sparkles.rectangle.stack" : "tray.full.fill"
             )
         }
@@ -60,6 +64,7 @@ struct DesktopCleanerApp: App {
         Settings {
             SettingsView()
                 .environmentObject(model)
+                .environment(\.locale, model.appLanguage.locale)
                 .frame(width: 780, height: 580)
         }
     }

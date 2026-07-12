@@ -6,7 +6,11 @@ public protocol AIProposalServicing: Sendable {
     func saveAPIKey(_ key: String) async throws
     func deleteAPIKey() async throws
     func testConnection() async throws
-    func proposeMetadata(for items: [ScannedItem], quality: AIQualityPreference) async throws -> [AIProposal]
+    func proposeMetadata(
+        for items: [ScannedItem],
+        quality: AIQualityPreference,
+        responseLanguage: String
+    ) async throws -> [AIProposal]
 }
 
 public enum OpenAIServiceError: Error, Equatable {
@@ -65,14 +69,15 @@ public struct OpenAIRequestBuilder: Sendable {
 
     public func makeMetadataRequest(
         items: [ScannedItem],
-        quality: AIQualityPreference = .fast
+        quality: AIQualityPreference = .fast,
+        responseLanguage: String = "English"
     ) throws -> URLRequest {
         let metadata = items.map(AIMetadataItem.init)
         let payload: [String: Any] = [
             "model": model,
             "store": false,
             "reasoning": ["effort": quality.reasoningEffort],
-            "instructions": "Classify file metadata and suggest concise basenames. suggestedBasename must exclude the file extension. Never invent extensions, paths, commands, deletion actions, or approval decisions. Return one item for every supplied id.",
+            "instructions": "Classify file metadata and suggest concise basenames. suggestedBasename must exclude the file extension. Never invent extensions, paths, commands, deletion actions, or approval decisions. Return one item for every supplied id. Write each reason in \(responseLanguage).",
             "input": try metadataJSONObject(metadata),
             "text": [
                 "format": [
@@ -167,10 +172,15 @@ public actor OpenAIProposalService: AIProposalServicing {
 
     public func proposeMetadata(
         for items: [ScannedItem],
-        quality: AIQualityPreference = .fast
+        quality: AIQualityPreference = .fast,
+        responseLanguage: String = "English"
     ) async throws -> [AIProposal] {
         guard let key = try await keyStore.loadAPIKey() else { throw OpenAIServiceError.missingAPIKey }
-        var request = try requestBuilder.makeMetadataRequest(items: items, quality: quality)
+        var request = try requestBuilder.makeMetadataRequest(
+            items: items,
+            quality: quality,
+            responseLanguage: responseLanguage
+        )
         request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
 
         var lastError: Error?

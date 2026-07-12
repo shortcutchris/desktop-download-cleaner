@@ -66,6 +66,12 @@ The current plan and its user decisions survive relaunch so review work is not l
 
 The diagnostics exporter accepts counts, booleans, enum settings, app version, and operating-system version only. It never accepts source folders, plan items, transaction steps, errors, file names, paths, credentials, or model payloads, making redaction a structural boundary rather than a best-effort text filter.
 
+## Accepted for 1.2
+
+### Runtime language selection does not rewrite cleanup data
+
+Desktop Cleaner ships English and German resource bundles and defaults to the macOS language. The user can switch the interface immediately in Settings, and the explicit choice persists locally. SwiftUI labels and dynamic app messages use the selected locale, and OpenAI proposal reasons request the same language. Stable category directory names, existing plans, filenames, paths, rules, and journals are never translated or rewritten, preserving transaction and rollback identities. Adding another language is limited to the central language manifest and one localized resource bundle.
+
 ## Remaining distribution decisions
 
 - Whether move or copy should remain the default after usability testing

@@ -43,6 +43,18 @@ private struct GeneralSettingsView: View {
 
     var body: some View {
         Form {
+            Section("Language") {
+                Picker("App language", selection: $model.appLanguage) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(model.localized(language.displayNameKey)).tag(language)
+                    }
+                }
+                .accessibilityIdentifier("settings.language")
+                Text("The interface updates immediately. File names, saved rules, and stable review-folder paths are never rewritten.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("settings.languageDescription")
+            }
             Toggle("Launch at login", isOn: Binding(
                 get: { model.launchAtLogin },
                 set: { model.setLaunchAtLogin($0) }
@@ -75,7 +87,7 @@ private struct ReviewSettingsView: View {
     var body: some View {
         Form {
             Section("Visible review folder") {
-                LabeledContent("Current", value: model.reviewRoot?.displayName ?? "Not selected")
+                LabeledContent("Current", value: model.reviewRoot?.displayName ?? model.localized("Not selected"))
                 Button("Choose Review Folder…") { model.chooseReviewRoot() }
             }
             Section("Staging") {
@@ -85,7 +97,7 @@ private struct ReviewSettingsView: View {
                 }
                 Picker("Session history", selection: $model.sessionHistoryRetention) {
                     ForEach(SessionHistoryRetention.allCases, id: \.self) { policy in
-                        Text(policy.displayName).tag(policy)
+                        Text(model.localized(policy.displayName)).tag(policy)
                     }
                 }
                 Text("Retention removes only finalized or rolled-back metadata. Staged files and undoable sessions are never pruned.")
@@ -106,17 +118,17 @@ private struct RenamingSettingsView: View {
         Form {
             Picker("Naming style", selection: $model.filenameNamingStyle) {
                 ForEach(FilenameNamingStyle.allCases, id: \.self) { style in
-                    Text(style.displayName).tag(style)
+                    Text(model.localized(style.displayName)).tag(style)
                 }
             }
             Picker("Detected dates", selection: $model.filenameDateStyle) {
                 ForEach(FilenameDateStyle.allCases, id: \.self) { style in
-                    Text(style.displayName).tag(style)
+                    Text(model.localized(style.displayName)).tag(style)
                 }
             }
             Picker("Collision suffix", selection: $model.collisionSuffixStyle) {
                 ForEach(CollisionSuffixStyle.allCases, id: \.self) { style in
-                    Text(style.displayName).tag(style)
+                    Text(model.localized(style.displayName)).tag(style)
                 }
             }
             Text("Styles affect new plans only. The real extension is always preserved and every result is sanitized locally.")
@@ -142,12 +154,17 @@ private struct SourceSettingsView: View {
                             )) {
                                 Label(source.displayName, systemImage: "folder.fill")
                             }
-                            .accessibilityLabel("Enable \(source.displayName)")
+                            .accessibilityLabel(model.localized("Enable %@", source.displayName))
                             Spacer()
                             Button("Remove", role: .destructive) { model.removeSource(source) }
                         }
                         Stepper(
-                            "Scan depth: \(source.scanDepth == 0 ? "direct children" : "\(source.scanDepth) level(s)")",
+                            model.localized(
+                                "Scan depth: %@",
+                                source.scanDepth == 0
+                                    ? model.localized("direct children")
+                                    : model.localized("%@ level(s)", String(source.scanDepth))
+                            ),
                             value: Binding(
                                 get: { source.scanDepth },
                                 set: { model.updateSource(id: source.id, scanDepth: $0) }
@@ -155,7 +172,7 @@ private struct SourceSettingsView: View {
                             in: 0...5
                         )
                         .font(.caption)
-                        .accessibilityLabel("Scan depth for \(source.displayName)")
+                        .accessibilityLabel(model.localized("Scan depth for %@", source.displayName))
                     }
                     .padding(.vertical, 4)
                 }
@@ -168,8 +185,8 @@ private struct SourceSettingsView: View {
             Section("Scan policy") {
                 Stepper(
                     model.minimumAgeDays == 0
-                        ? "Include files of any age"
-                        : "Only files at least \(model.minimumAgeDays) day(s) old",
+                        ? model.localized("Include files of any age")
+                        : model.localized("Only files at least %@ day(s) old", String(model.minimumAgeDays)),
                     value: $model.minimumAgeDays,
                     in: 0...365
                 )
@@ -199,7 +216,7 @@ private struct SourceSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             Section("Visible review folder") {
-                LabeledContent("Current", value: model.reviewRoot?.displayName ?? "Not selected")
+                LabeledContent("Current", value: model.reviewRoot?.displayName ?? model.localized("Not selected"))
                 Button("Choose Review Folder…") { model.chooseReviewRoot() }
             }
         }
@@ -222,7 +239,10 @@ private struct RuleSettingsView: View {
                 Button { model.addRule() } label: { Label("Add", systemImage: "plus") }
             }
             if !model.ruleConflicts.isEmpty {
-                Label("\(model.ruleConflicts.count) conflicting rule pair(s). The first enabled rule wins.", systemImage: "exclamationmark.triangle.fill")
+                Label(model.localized(
+                    "%@ conflicting rule pair(s). The first enabled rule wins.",
+                    String(model.ruleConflicts.count)
+                ), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                     .font(.callout)
             }
@@ -230,12 +250,14 @@ private struct RuleSettingsView: View {
                 ForEach($model.rules) { $rule in
                     HStack(spacing: 10) {
                         Toggle("", isOn: $rule.isEnabled).labelsHidden()
-                            .accessibilityLabel("Enable rule \(rule.name)")
+                            .accessibilityLabel(model.localized("Enable rule %@", rule.name))
                         TextField("Name", text: $rule.name)
                         TextField("Pattern", text: $rule.condition.pattern)
                             .frame(width: 130)
                         Picker("Category", selection: $rule.category) {
-                            ForEach(ItemCategory.allCases, id: \.self) { Text($0.folderName).tag($0) }
+                            ForEach(ItemCategory.allCases, id: \.self) {
+                                Text(model.localizedCategory($0)).tag($0)
+                            }
                         }
                         .frame(width: 150)
                     }
@@ -262,7 +284,7 @@ private struct AISettingsView: View {
             }
             Picker("Proposal quality", selection: $model.aiQualityPreference) {
                 ForEach(AIQualityPreference.allCases, id: \.self) { quality in
-                    Text(quality.displayName).tag(quality)
+                    Text(model.localized(quality.displayName)).tag(quality)
                 }
             }
             Text("Quality changes reasoning effort for the same validated metadata-only capability.")
@@ -303,7 +325,11 @@ private struct UpdateSettingsView: View {
 
     var body: some View {
         Form {
-            LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Development")
+            LabeledContent(
+                "Version",
+                value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+                    ?? model.localized("Development")
+            )
             Picker("Update channel", selection: .constant("Stable")) {
                 Text("Stable").tag("Stable")
             }

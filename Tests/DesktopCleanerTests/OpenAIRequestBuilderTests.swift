@@ -45,4 +45,18 @@ final class OpenAIRequestBuilderTests: XCTestCase {
         XCTAssertEqual(reasoning["effort"] as? String, "high")
         XCTAssertEqual(payload["store"] as? Bool, false)
     }
+
+    func testRequestedInterfaceLanguageIsAppliedOnlyToProposalReasons() throws {
+        let request = try OpenAIRequestBuilder().makeMetadataRequest(
+            items: [makeItem(filename: "report.pdf")],
+            responseLanguage: "German"
+        )
+        let payload = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(request.httpBody)) as? [String: Any]
+        )
+        let instructions = try XCTUnwrap(payload["instructions"] as? String)
+
+        XCTAssertTrue(instructions.contains("Write each reason in German."))
+        XCTAssertFalse(try XCTUnwrap(payload["input"] as? String).contains("German"))
+    }
 }

@@ -28,10 +28,10 @@ public actor NotificationService {
         try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
     }
 
-    public func notifyStagingComplete(itemCount: Int, sessionName: String) async throws {
+    public func notify(title: String, body: String) async throws {
         let content = UNMutableNotificationContent()
-        content.title = "Cleanup session staged"
-        content.body = "\(itemCount) items are ready in \(sessionName)."
+        content.title = title
+        content.body = body
         content.sound = .default
         let request = UNNotificationRequest(
             identifier: "desktop-cleaner-\(UUID().uuidString)",
@@ -41,4 +41,3 @@ public actor NotificationService {
         try await UNUserNotificationCenter.current().add(request)
     }
 }
-

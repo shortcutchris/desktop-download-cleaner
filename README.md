@@ -7,10 +7,10 @@ Desktop Cleaner is a native macOS utility for safely organizing files accumulate
 ## What 1.0 includes
 
 - Sandboxed, security-scoped access to user-selected source and review folders.
-- Read-only, depth-limited scanning with deterministic categories, exclusions, sensitive-file protection, and safe filename cleanup.
+- Read-only scanning with per-source depth and enablement, an optional minimum-age threshold, editable glob exclusions, deterministic categories, sensitive-file protection, and safe filename cleanup.
 - Searchable grouped proposals, Quick Look, editable filenames and categories, partial approval, and explicit local rules.
-- Collision-safe move or copy transactions with append-only JSON journals, restart recovery, and complete rollback.
-- Optional metadata-only OpenAI proposals through the Responses API and strict Structured Outputs.
+- Collision-safe move or copy transactions with append-only JSON journals, restart recovery, complete rollback, and an explicit “keep as final” state.
+- Optional cancellable metadata-only OpenAI proposals through the Responses API and strict Structured Outputs, with an exact item preview and approximate input-use indication.
 - A user-owned API key stored only in macOS Keychain, request-scope preview, connection test, and key deletion.
 - Menu bar access, launch at login, staging notifications, app-data reset, Sparkle integration, and a complete macOS icon set.
 

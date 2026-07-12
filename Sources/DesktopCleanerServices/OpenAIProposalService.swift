@@ -161,8 +161,10 @@ public actor OpenAIProposalService {
 
         var lastError: Error?
         for attempt in 0..<3 {
+            try Task.checkCancellation()
             do {
                 let (data, response) = try await session.data(for: request)
+                try Task.checkCancellation()
                 guard let http = response as? HTTPURLResponse else { throw OpenAIServiceError.invalidResponse }
                 guard (200..<300).contains(http.statusCode) else {
                     let message = Self.apiErrorMessage(from: data) ?? "Request failed"

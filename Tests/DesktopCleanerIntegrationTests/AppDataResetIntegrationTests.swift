@@ -18,6 +18,7 @@ final class AppDataResetIntegrationTests: XCTestCase {
         let suiteName = "DesktopCleanerResetTests.\(UUID())"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         defaults.set("move", forKey: "defaultFileOperation")
+        defaults.set(14, forKey: "minimumAgeDays")
         defaults.set(true, forKey: "unrelatedSetting")
         addTeardownBlock { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
 
@@ -27,6 +28,7 @@ final class AppDataResetIntegrationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: appData.path))
         XCTAssertTrue(FileManager.default.fileExists(atPath: userFile.path))
         XCTAssertNil(defaults.object(forKey: "defaultFileOperation"))
+        XCTAssertNil(defaults.object(forKey: "minimumAgeDays"))
         XCTAssertEqual(defaults.bool(forKey: "unrelatedSetting"), true)
     }
 }

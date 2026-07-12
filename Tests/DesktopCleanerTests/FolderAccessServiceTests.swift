@@ -37,6 +37,27 @@ final class FolderAccessServiceTests: XCTestCase {
         }
         XCTAssertEqual(codec.startCount, 0)
     }
+
+    func testUpdatePersistsFolderSettingsWithoutReplacingBookmark() async throws {
+        let store = MemoryFolderStore()
+        let codec = FakeBookmarkCodec()
+        let service = FolderAccessService(store: store, codec: codec)
+        let url = URL(fileURLWithPath: "/tmp/configurable-source", isDirectory: true)
+        var folder = try await service.authorize(url, scanDepth: 0)
+
+        folder.scanDepth = 3
+        folder.isEnabled = false
+        try await service.update(folder)
+
+        let persisted = try await service.authorizedFolders()
+        XCTAssertEqual(persisted, [folder])
+        let resolvedPath = try await service.withAccess(to: folder.id) { resolvedURL, resolvedFolder in
+            XCTAssertEqual(resolvedFolder.scanDepth, 3)
+            XCTAssertFalse(resolvedFolder.isEnabled)
+            return resolvedURL.path
+        }
+        XCTAssertEqual(resolvedPath, url.path)
+    }
 }
 
 private final class MemoryFolderStore: FolderAuthorizationStore, @unchecked Sendable {

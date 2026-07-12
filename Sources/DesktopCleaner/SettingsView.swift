@@ -67,13 +67,69 @@ private struct SourceSettingsView: View {
         Form {
             Section("Authorized sources") {
                 ForEach(model.sources) { source in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Toggle(isOn: Binding(
+                                get: { source.isEnabled },
+                                set: { model.updateSource(id: source.id, isEnabled: $0) }
+                            )) {
+                                Label(source.displayName, systemImage: "folder.fill")
+                            }
+                            .accessibilityLabel("Enable \(source.displayName)")
+                            Spacer()
+                            Button("Remove", role: .destructive) { model.removeSource(source) }
+                        }
+                        Stepper(
+                            "Scan depth: \(source.scanDepth == 0 ? "direct children" : "\(source.scanDepth) level(s)")",
+                            value: Binding(
+                                get: { source.scanDepth },
+                                set: { model.updateSource(id: source.id, scanDepth: $0) }
+                            ),
+                            in: 0...5
+                        )
+                        .font(.caption)
+                        .accessibilityLabel("Scan depth for \(source.displayName)")
+                    }
+                    .padding(.vertical, 4)
+                }
+                HStack {
+                    Button("Desktop…") { model.chooseDesktopFolder() }
+                    Button("Downloads…") { model.chooseDownloadsFolder() }
+                    Button("Other Folder…") { model.chooseSourceFolder() }
+                }
+            }
+            Section("Scan policy") {
+                Stepper(
+                    model.minimumAgeDays == 0
+                        ? "Include files of any age"
+                        : "Only files at least \(model.minimumAgeDays) day(s) old",
+                    value: $model.minimumAgeDays,
+                    in: 0...365
+                )
+                Text("Files without a reliable date remain visible rather than being silently skipped.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("Exclusions") {
+                ForEach($model.exclusions) { $exclusion in
                     HStack {
-                        Label(source.displayName, systemImage: "folder.fill")
-                        Spacer()
-                        Button("Remove", role: .destructive) { model.removeSource(source) }
+                        Picker("Match", selection: $exclusion.kind) {
+                            Text("Filename").tag(ExclusionRuleKind.filename)
+                            Text("Extension").tag(ExclusionRuleKind.pathExtension)
+                            Text("Relative path").tag(ExclusionRuleKind.relativePath)
+                        }
+                        .labelsHidden()
+                        .frame(width: 130)
+                        TextField("Glob pattern", text: $exclusion.pattern)
                     }
                 }
-                Button("Add Source Folder…") { model.chooseSourceFolder() }
+                .onDelete(perform: model.deleteExclusions)
+                Button { model.addExclusion() } label: {
+                    Label("Add Exclusion", systemImage: "plus")
+                }
+                Text("Use * and ? wildcards. Relative-path rules can exclude folders, for example Private/*.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Section("Visible review folder") {
                 LabeledContent("Current", value: model.reviewRoot?.displayName ?? "Not selected")
@@ -81,6 +137,7 @@ private struct SourceSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .onDisappear { model.saveExclusions() }
     }
 }
 
@@ -106,6 +163,7 @@ private struct RuleSettingsView: View {
                 ForEach($model.rules) { $rule in
                     HStack(spacing: 10) {
                         Toggle("", isOn: $rule.isEnabled).labelsHidden()
+                            .accessibilityLabel("Enable rule \(rule.name)")
                         TextField("Name", text: $rule.name)
                         TextField("Pattern", text: $rule.condition.pattern)
                             .frame(width: 130)

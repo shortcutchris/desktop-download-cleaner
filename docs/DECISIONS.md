@@ -44,6 +44,14 @@ The 1.0 icon uses an original dark-navy 3D document organizer with a metallic co
 
 The repository remains private. Sparkle automatic checks remain disabled because private GitHub assets cannot serve as a general public update feed. External release publication and repository visibility require explicit authorization after signing, notarization, and appcast verification.
 
+### Explicit session finalization
+
+A staged session remains rollback-capable until the user chooses “Keep as Final.” Finalization changes only the durable journal state and never moves or deletes the staged files. A retained journal cannot later be rolled back accidentally.
+
+### Persisted scan policy remains local
+
+Per-source enablement and depth, the minimum-age threshold, and glob exclusions are evaluated locally before planning. Missing timestamps remain visible instead of being silently filtered, and exclusions remove matching items from the plan without mutating their source files.
+
 ## Remaining distribution decisions
 
 - Whether move or copy should remain the default after usability testing

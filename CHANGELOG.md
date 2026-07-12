@@ -4,6 +4,17 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+### Added
+
+- Desktop and Downloads picker shortcuts plus persisted per-source enablement and scan-depth controls.
+- Persisted filename, extension, and relative-path glob exclusions and an optional minimum file-age scan policy.
+- Explicit session finalization, restart-safe security-scope reacquisition for rollback, menu-bar pending counts, and core keyboard shortcuts.
+- Exact AI batch item preview, approximate input-token indication, and user cancellation without discarding the local plan.
+
+### Changed
+
+- App-data reset now also clears the minimum-age scan policy while continuing to leave all user files untouched.
+
 ## [1.0.0] - 2026-07-12
 
 ### Added

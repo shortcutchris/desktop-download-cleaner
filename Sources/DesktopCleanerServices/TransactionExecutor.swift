@@ -10,6 +10,7 @@ public enum TransactionError: Error, Equatable {
     case sourceChanged
     case rollbackPathOccupied
     case destinationUnavailable
+    case invalidTransactionState
 }
 
 extension TransactionError: LocalizedError {
@@ -23,6 +24,7 @@ extension TransactionError: LocalizedError {
         case .sourceChanged: "A source file changed after the scan. Scan again before staging."
         case .rollbackPathOccupied: "An original path is occupied. Nothing was overwritten; move the occupant and retry undo."
         case .destinationUnavailable: "A destination became occupied. Nothing was overwritten."
+        case .invalidTransactionState: "This session cannot perform that action in its current state."
         }
     }
 }
@@ -108,6 +110,9 @@ public actor TransactionExecutor {
 
     public func rollback(journalID: UUID) async throws -> TransactionJournal {
         var journal = try await journalStore.load(id: journalID)
+        guard [.staged, .failed, .applying, .rollingBack].contains(journal.state) else {
+            throw TransactionError.invalidTransactionState
+        }
         journal.state = .rollingBack
         journal.updatedAt = Date()
         try await journalStore.persist(journal)
@@ -156,6 +161,15 @@ public actor TransactionExecutor {
 
     public func recoverableJournals() async throws -> [TransactionJournal] {
         try await journalStore.loadAll().filter { [.applying, .rollingBack, .failed].contains($0.state) }
+    }
+
+    public func retain(journalID: UUID) async throws -> TransactionJournal {
+        var journal = try await journalStore.load(id: journalID)
+        guard journal.state == .staged else { throw TransactionError.invalidTransactionState }
+        journal.state = .retained
+        journal.updatedAt = Date()
+        try await journalStore.persist(journal)
+        return journal
     }
 
     private func containedURL(

@@ -23,7 +23,8 @@ final class DesktopCleanerUITests: XCTestCase {
 
         XCTAssertTrue(app.windows["Cleanup Plan · 6"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.textFields["inspector.filename"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.buttons["toolbar.stage"].exists)
-        XCTAssertFalse(app.buttons["toolbar.stage"].isEnabled)
+        let stageButton = app.buttons.matching(identifier: "toolbar.stage").firstMatch
+        XCTAssertTrue(stageButton.waitForExistence(timeout: 3))
+        XCTAssertFalse(stageButton.isEnabled)
     }
 }

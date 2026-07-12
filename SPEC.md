@@ -231,7 +231,7 @@ Rules are ordered, enabled/disabled, editable, exportable, and locally evaluated
 
 ## 9. Settings
 
-- General: launch at login, menu bar presence, notifications.
+- General: app language (system default, English, or German), launch at login, menu bar presence, notifications.
 - Sources: watched folders, scan depth, age threshold, exclusions.
 - Review: review root, move/copy default, session retention.
 - Renaming: naming style, date style, collision suffix style.

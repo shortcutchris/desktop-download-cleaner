@@ -4,6 +4,19 @@ All notable changes are documented here. The project follows semantic versioning
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-12
+
+### Added
+
+- Complete German and English localization across onboarding, workspace, inspector, settings, menu bar, commands, status messages, errors, notifications, and deterministic explanations.
+- A persistent runtime language picker with system-default, English, and German choices.
+- A bundle-based localization manifest and format-placeholder validation that make future languages a small resource-only extension.
+
+### Changed
+
+- OpenAI metadata proposal reasons now follow the selected interface language without changing the metadata-only privacy boundary.
+- Stable category folders, saved rules, filenames, plans, and transaction paths remain unchanged when the interface language switches.
+
 ## [1.1.4] - 2026-07-12
 
 ### Changed

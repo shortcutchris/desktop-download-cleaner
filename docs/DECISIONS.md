@@ -26,9 +26,9 @@ The complete deterministic workflow remains useful without an OpenAI key. AI aug
 
 AI returns schema-validated proposals. It cannot supply executable code, absolute filesystem paths, extensions, or destructive actions.
 
-### Private repository initially
+### Public repository after release approval
 
-The repository starts private while product naming, code signing, privacy language, and release readiness are developed. Public visibility is a deliberate release decision.
+The repository started private while product naming, code signing, privacy language, and release readiness were developed. The owner explicitly approved public visibility after the signed and notarized 1.1 release was verified.
 
 ## Accepted for 1.0
 
@@ -40,9 +40,9 @@ The first release enables only the tested metadata capability. Text and visual p
 
 The 1.0 icon uses an original dark-navy 3D document organizer with a metallic containment ring and shield check. It communicates organization, review, and safety rather than deletion, trash, or generic cleanup.
 
-### Private release boundary
+### Signed public update boundary
 
-The repository remains private. Sparkle automatic checks remain disabled because private GitHub assets cannot serve as a general public update feed. External release publication and repository visibility require explicit authorization after signing, notarization, and appcast verification.
+The public GitHub release assets serve as the stable Sparkle feed after explicit authorization. Manual checks are available and automatic checks are opt-in. Every update must still be Developer ID signed, Apple notarized, and protected by the app's dedicated Sparkle EdDSA signature.
 
 ### Explicit session finalization
 

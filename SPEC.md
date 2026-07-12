@@ -237,7 +237,7 @@ Rules are ordered, enabled/disabled, editable, exportable, and locally evaluated
 - Renaming: naming style, date style, collision suffix style.
 - AI: API key, connection test, privacy level, quality preference.
 - Rules: ordered deterministic rules.
-- Updates: automatic update checks and update channel.
+- Updates: manual checks against the signed public stable feed and opt-in automatic checks.
 
 ## 10. Menu bar behavior
 

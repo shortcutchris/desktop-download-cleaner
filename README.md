@@ -8,9 +8,9 @@ Desktop Cleaner is a native macOS utility for safely organizing files accumulate
 
 ## Download and install
 
-Download the latest notarized universal macOS build from [GitHub Releases](https://github.com/shortcutchris/desktop-download-cleaner/releases/latest/download/DesktopCleaner-1.1.3.zip).
+Download the latest notarized universal macOS build from [GitHub Releases](https://github.com/shortcutchris/desktop-download-cleaner/releases/latest/download/DesktopCleaner-1.1.4.zip).
 
-1. Download and expand `DesktopCleaner-1.1.3.zip`.
+1. Download and expand `DesktopCleaner-1.1.4.zip`.
 2. Move **Desktop Cleaner.app** into `/Applications`.
 3. Launch the app, choose Desktop, Downloads, or another folder, and review the read-only cleanup plan before approving anything.
 

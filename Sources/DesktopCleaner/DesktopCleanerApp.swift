@@ -61,7 +61,7 @@ private struct DesktopCleanerCommands: Commands {
             Button(model.localized("Desktop Cleaner Help")) {
                 openWindow(id: "help")
             }
-            .keyboardShortcut("?", modifiers: [.command])
+            .keyboardShortcut("/", modifiers: [.command, .shift])
         }
         CommandGroup(after: .newItem) {
             Button(model.localized("Add Source Folder…")) { model.chooseSourceFolder() }

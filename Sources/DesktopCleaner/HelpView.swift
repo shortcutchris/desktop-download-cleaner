@@ -301,8 +301,9 @@ private struct GuidedHelpTour: View {
                         .foregroundStyle(.secondary)
                         Text(model.localized(stepTitleKeys[step]))
                             .font(.title.bold())
-                            .accessibilityIdentifier("help.tour.stepTitle")
+                            .accessibilityElement(children: .ignore)
                             .accessibilityLabel(model.localized(stepTitleKeys[step]))
+                            .accessibilityIdentifier("help.tour.stepTitle")
                         Text(model.localized(stepBodyKeys[step]))
                             .foregroundStyle(.secondary)
                         practiceCard

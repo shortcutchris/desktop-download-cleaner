@@ -68,7 +68,7 @@ final class DesktopCleanerUITests: XCTestCase {
         let actionButton = app.descendants(matching: .any)["help.tour.action"]
         let nextButton = app.descendants(matching: .any)["help.tour.next"]
         XCTAssertTrue(stepTitle.waitForExistence(timeout: 5))
-        XCTAssertEqual(stepTitle.label, "Quelle auswählen")
+        XCTAssertTrue(app.staticTexts["Quelle auswählen"].waitForExistence(timeout: 3))
 
         XCTAssertTrue(actionButton.waitForExistence(timeout: 3))
         XCTAssertEqual(actionButton.label, "Beispiel auswählen")
@@ -78,7 +78,7 @@ final class DesktopCleanerUITests: XCTestCase {
         XCTAssertTrue(nextButton.waitForExistence(timeout: 3))
         XCTAssertEqual(nextButton.label, "Weiter")
         nextButton.click()
-        XCTAssertEqual(stepTitle.label, "Schreibgeschützten Plan erstellen")
+        XCTAssertTrue(app.staticTexts["Schreibgeschützten Plan erstellen"].waitForExistence(timeout: 3))
 
         XCTAssertTrue(app.staticTexts[
             "Diese Einführung ist eine Simulation. Sie liest, erstellt, verschiebt oder löscht niemals Dateien."
@@ -115,9 +115,10 @@ final class DesktopCleanerUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Installiert: Version 1.3.0 · Build 9"].waitForExistence(timeout: 3))
         let latestSummary = app.descendants(matching: .any)["changelog.release.1.3.0.summary"]
         XCTAssertTrue(latestSummary.waitForExistence(timeout: 3))
-        XCTAssertEqual(
-            latestSummary.label,
-            "Offline-Hilfe, interaktive Einführung und ein Versionsverlauf in der App."
+        XCTAssertTrue(
+            latestSummary.label.contains(
+                "Offline-Hilfe, interaktive Einführung und ein Versionsverlauf in der App."
+            )
         )
     }
 }

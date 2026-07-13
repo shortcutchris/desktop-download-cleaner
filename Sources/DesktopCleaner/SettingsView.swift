@@ -470,6 +470,8 @@ private struct ChangelogSettingsView: View {
                     Text(model.localized(release.summaryKey))
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("changelog.release.\(release.version).summary")
+                        .accessibilityLabel(model.localized(release.summaryKey))
                 }
             }
         }

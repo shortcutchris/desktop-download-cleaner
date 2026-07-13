@@ -91,7 +91,7 @@ final class DesktopCleanerUITests: XCTestCase {
         let app = launchApp(language: "en")
         defer { app.terminate() }
 
-        app.typeKey("?", modifierFlags: .command)
+        app.typeKey("/", modifierFlags: [.command, .shift])
 
         XCTAssertTrue(app.windows["Desktop Cleaner Help"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Interactive Guided Tour"].waitForExistence(timeout: 5))
@@ -113,8 +113,11 @@ final class DesktopCleanerUITests: XCTestCase {
         XCTAssertTrue(changelog.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Versionsverlauf"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.staticTexts["Installiert: Version 1.3.0 · Build 9"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts[
+        let latestSummary = app.descendants(matching: .any)["changelog.release.1.3.0.summary"]
+        XCTAssertTrue(latestSummary.waitForExistence(timeout: 3))
+        XCTAssertEqual(
+            latestSummary.label,
             "Offline-Hilfe, interaktive Einführung und ein Versionsverlauf in der App."
-        ].waitForExistence(timeout: 3))
+        )
     }
 }

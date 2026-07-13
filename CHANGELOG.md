@@ -18,6 +18,7 @@ All notable changes are documented here. The project follows semantic versioning
 
 - The German and English localization catalogs now include all Help articles, guided-tour controls, and safety explanations.
 - Release history is driven by a bundled manifest validated against the current marketing version and build.
+- Guided-tour steps and changelog summaries expose explicit accessibility labels for reliable VoiceOver and UI automation.
 
 ## [1.2.0] - 2026-07-12
 

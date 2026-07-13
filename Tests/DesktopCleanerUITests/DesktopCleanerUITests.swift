@@ -94,7 +94,7 @@ final class DesktopCleanerUITests: XCTestCase {
         let helpMenu = app.menuBars.menuBarItems["Help"]
         XCTAssertTrue(helpMenu.waitForExistence(timeout: 3))
         helpMenu.click()
-        let helpCommand = app.menuItems["Desktop Cleaner Help"]
+        let helpCommand = helpMenu.descendants(matching: .menuItem)["Desktop Cleaner Help"]
         XCTAssertTrue(helpCommand.waitForExistence(timeout: 3))
         helpCommand.click()
 

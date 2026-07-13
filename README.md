@@ -28,6 +28,7 @@ The release is signed with Developer ID, notarized by Apple, stapled for offline
 - Menu bar access, launch at login, staging notifications, exact redacted-diagnostics preview/export, app-data reset, Sparkle integration, and a complete original premium 3D macOS icon set.
 - A fully localized German and English interface with an immediate, persistent language switch in **Settings → General → Language**. System language remains available as the default.
 - A searchable, fully offline Help window in German and English, including a safe interactive tour that simulates source selection, planning, approval, staging, and undo without accessing or changing files.
+- A localized in-app version history under **Settings → Changelog**. The main-window status bar shows the installed version and build plus the latest release summary and opens that tab directly.
 
 Desktop Cleaner is not a drag-and-drop shelf and not a general system cleaner. It never automatically deletes files.
 
@@ -63,3 +64,7 @@ The shared `DesktopCleaner` scheme runs unit, temporary-directory integration, a
 ### Add another language
 
 Add one case to `AppLanguage` in `Sources/DesktopCleaner/Localization.swift`, add the language's display name and AI response-language name there, then add `Resources/<language-code>.lproj/Localizable.strings`. XcodeGen groups `.lproj` resources automatically; no view or workflow code needs to change.
+
+### Add a release to the in-app changelog
+
+Add the release metadata and localization keys to `Resources/AppChangelog.json`, then translate those keys in every shipped language bundle. The localization test verifies that the manifest version and build match `project.yml` and that every German changelog entry is present.

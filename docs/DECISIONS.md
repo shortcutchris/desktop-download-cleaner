@@ -78,6 +78,10 @@ Desktop Cleaner ships English and German resource bundles and defaults to the ma
 
 The searchable Help center is fully offline and localized through the existing resource bundles. Its guided workflow uses fixed sample labels and ephemeral SwiftUI view state only. It has no access to folder bookmarks, scanners, plans, transactions, persistence, Keychain, or network adapters, so practicing source selection, planning, approval, staging, and undo cannot touch or transmit user data.
 
+### The in-app changelog is a bundled release manifest
+
+The app displays release history from a bundled JSON manifest rather than fetching mutable remote content or trying to parse Markdown at runtime. The manifest is versioned with the release, localized through the same bundles as the interface, and validated against the build settings. The main-window build summary and Settings history share that source, preventing their release descriptions from drifting apart.
+
 ## Remaining distribution decisions
 
 - Whether move or copy should remain the default after usability testing

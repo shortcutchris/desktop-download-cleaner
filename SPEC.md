@@ -239,6 +239,9 @@ Rules are ordered, enabled/disabled, editable, exportable, and locally evaluated
 - Rules: ordered deterministic rules.
 - Updates: manual checks against the signed public stable feed and opt-in automatic checks.
 - Help: open the localized offline guide and interactive workflow tour.
+- Changelog: show the installed version and build plus categorized, localized release notes from the bundled version history.
+
+The main-window status bar displays the installed version, build number, and latest release summary. Activating it opens Settings directly on the Changelog tab.
 
 ## 10. Help and guided learning
 

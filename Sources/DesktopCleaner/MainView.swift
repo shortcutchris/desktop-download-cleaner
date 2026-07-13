@@ -671,6 +671,7 @@ private struct ConfidenceBadge: View {
 
 private struct StatusBar: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         HStack(spacing: 8) {
@@ -684,6 +685,25 @@ private struct StatusBar: View {
                     String(model.pendingCount)
                 ))
             }
+            Button {
+                model.selectedSettingsTab = .changelog
+                openSettings()
+            } label: {
+                Label(
+                    model.localized(
+                        "Version %@ · Build %@ · %@",
+                        AppBuildInfo.version,
+                        AppBuildInfo.build,
+                        model.localized(
+                            AppChangelogManifest.bundled.latest?.summaryKey ?? "View changelog"
+                        )
+                    ),
+                    systemImage: "clock.arrow.circlepath"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("status.changelog")
+            .help(model.localized("Open version history in Settings"))
         }
         .font(.caption)
         .foregroundStyle(.secondary)

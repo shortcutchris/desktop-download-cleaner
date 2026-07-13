@@ -1,25 +1,46 @@
 import DesktopCleanerCore
 import SwiftUI
 
+enum SettingsTab: Hashable {
+    case general
+    case sources
+    case review
+    case renaming
+    case rules
+    case ai
+    case updates
+    case changelog
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        TabView {
+        TabView(selection: $model.selectedSettingsTab) {
             GeneralSettingsView()
                 .tabItem { Label("General", systemImage: "gearshape") }
+                .tag(SettingsTab.general)
             SourceSettingsView()
                 .tabItem { Label("Sources", systemImage: "folder") }
+                .tag(SettingsTab.sources)
             ReviewSettingsView()
                 .tabItem { Label("Review", systemImage: "shippingbox") }
+                .tag(SettingsTab.review)
             RenamingSettingsView()
                 .tabItem { Label("Renaming", systemImage: "textformat") }
+                .tag(SettingsTab.renaming)
             RuleSettingsView()
                 .tabItem { Label("Rules", systemImage: "list.bullet.rectangle") }
+                .tag(SettingsTab.rules)
             AISettingsView()
                 .tabItem { Label("AI", systemImage: "sparkles") }
+                .tag(SettingsTab.ai)
             UpdateSettingsView()
                 .tabItem { Label("Updates", systemImage: "arrow.triangle.2.circlepath") }
+                .tag(SettingsTab.updates)
+            ChangelogSettingsView()
+                .tabItem { Label("Changelog", systemImage: "clock.arrow.circlepath") }
+                .tag(SettingsTab.changelog)
         }
         .padding(18)
         .confirmationDialog(
@@ -358,6 +379,126 @@ private struct UpdateSettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct ChangelogSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var expandedVersions: Set<String> = [AppBuildInfo.version]
+
+    private let manifest = AppChangelogManifest.bundled
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Label("Version History", systemImage: "clock.arrow.circlepath")
+                        .font(.title2.bold())
+                    Text(model.localized(
+                        "Installed: Version %@ · Build %@",
+                        AppBuildInfo.version,
+                        AppBuildInfo.build
+                    ))
+                    .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if manifest.releases.isEmpty {
+                    ContentUnavailableView(
+                        "Changelog Unavailable",
+                        systemImage: "doc.text.magnifyingglass",
+                        description: Text("The bundled version history could not be loaded.")
+                    )
+                } else {
+                    ForEach(manifest.releases) { release in
+                        releaseCard(release)
+                    }
+                }
+            }
+            .padding(4)
+        }
+        .accessibilityIdentifier("settings.changelog")
+    }
+
+    private func releaseCard(_ release: AppRelease) -> some View {
+        GroupBox {
+            DisclosureGroup(isExpanded: Binding(
+                get: { expandedVersions.contains(release.version) },
+                set: { expanded in
+                    if expanded {
+                        expandedVersions.insert(release.version)
+                    } else {
+                        expandedVersions.remove(release.version)
+                    }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(release.sections) { section in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label(model.localized(section.kind.titleKey), systemImage: section.kind.iconName)
+                                .font(.headline)
+                                .foregroundStyle(section.kind == .security ? Color.orange : Color.accentColor)
+                            ForEach(section.itemKeys, id: \.self) { key in
+                                Label(model.localized(key), systemImage: "circle.fill")
+                                    .labelStyle(ChangelogItemLabelStyle())
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 12)
+            } label: {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Text(model.localized("Version %@", release.version))
+                            .font(.headline)
+                        Text(model.localized("Build %@", release.build))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        if release.version == AppBuildInfo.version {
+                            Text("Installed")
+                                .font(.caption2.bold())
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Color.accentColor.opacity(0.14), in: Capsule())
+                                .foregroundStyle(.tint)
+                        }
+                        Spacer()
+                        Text(localizedDate(release.date))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.tertiary)
+                    }
+                    Text(model.localized(release.summaryKey))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .accessibilityIdentifier("changelog.release.\(release.version)")
+    }
+
+    private func localizedDate(_ value: String) -> String {
+        let input = DateFormatter()
+        input.locale = Locale(identifier: "en_US_POSIX")
+        input.dateFormat = "yyyy-MM-dd"
+        guard let date = input.date(from: value) else { return value }
+
+        let output = DateFormatter()
+        output.locale = model.appLanguage.locale
+        output.dateStyle = .medium
+        return output.string(from: date)
+    }
+}
+
+private struct ChangelogItemLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 9) {
+            configuration.icon
+                .font(.system(size: 5))
+                .foregroundStyle(.tertiary)
+            configuration.title
+                .font(.callout)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 

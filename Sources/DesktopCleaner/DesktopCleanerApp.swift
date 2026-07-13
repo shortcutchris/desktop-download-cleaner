@@ -59,6 +59,7 @@ private struct DesktopCleanerCommands: Commands {
     var body: some Commands {
         CommandGroup(replacing: .help) {
             Button(model.localized("Desktop Cleaner Help")) {
+                model.requestHelpPresentation()
                 openWindow(id: "help")
             }
             .keyboardShortcut("?", modifiers: [.command])

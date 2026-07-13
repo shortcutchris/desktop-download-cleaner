@@ -494,6 +494,7 @@
 "A safe interactive tour for planning, approval, staging, and undo." = "Eine sichere interaktive Einführung für Planung, Genehmigung, Bereitstellung und Rückgängig.";
 "A complete version history inside Settings." = "Ein vollständiger Versionsverlauf in den Einstellungen.";
 "A clickable version and build summary in the main window." = "Eine anklickbare Versions- und Build-Zusammenfassung im Hauptfenster.";
+"The Help window no longer restores over the main window after relaunch." = "Das Hilfefenster wird nach einem Neustart nicht mehr über dem Hauptfenster wiederhergestellt.";
 "German and English throughout the complete app." = "Deutsch und Englisch in der gesamten App.";
 "Immediate language switching between System Default, English, and German." = "Sofortiger Sprachwechsel zwischen Systemstandard, Englisch und Deutsch.";
 "An extensible localization manifest for future languages." = "Ein erweiterbares Lokalisierungsmanifest für zukünftige Sprachen.";

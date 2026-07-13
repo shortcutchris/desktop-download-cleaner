@@ -128,6 +128,7 @@ final class AppModel: ObservableObject {
     private let sessionStore = SessionStore()
     private let planStore = PlanStore()
     private let ruleStore = RuleStore()
+    private var helpPresentationRequested = false
     private let exclusionStore = ExclusionStore()
     private let openAIService: any AIProposalServicing = OpenAIProposalService()
     private let launchAtLoginService = LaunchAtLoginService()
@@ -208,6 +209,15 @@ final class AppModel: ObservableObject {
     }
     func localized(_ key: String, _ arguments: CVarArg...) -> String {
         L10n.string(key, language: appLanguage, arguments: arguments)
+    }
+
+    func requestHelpPresentation() {
+        helpPresentationRequested = true
+    }
+
+    func consumeHelpPresentationRequest() -> Bool {
+        defer { helpPresentationRequested = false }
+        return helpPresentationRequested
     }
 
     func localizedCategory(_ category: ItemCategory) -> String {

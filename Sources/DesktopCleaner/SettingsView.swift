@@ -85,6 +85,7 @@ private struct GeneralSettingsView: View {
             Toggle("Show menu bar item", isOn: $model.menuBarEnabled)
             Section("Help") {
                 Button {
+                    model.requestHelpPresentation()
                     openWindow(id: "help")
                 } label: {
                     Label("Open Help & Guide", systemImage: "questionmark.circle")

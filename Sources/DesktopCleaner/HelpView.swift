@@ -138,6 +138,7 @@ enum HelpTopic: String, CaseIterable, Identifiable {
 
 struct HelpView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.dismissWindow) private var dismissWindow
     @State private var selection: HelpTopic = .guidedTour
     @State private var searchText = ""
 
@@ -190,6 +191,11 @@ struct HelpView: View {
         }
         .navigationTitle(model.localized("Desktop Cleaner Help"))
         .frame(minWidth: 860, minHeight: 600)
+        .onAppear {
+            if !model.consumeHelpPresentationRequest() {
+                dismissWindow(id: "help")
+            }
+        }
     }
 }
 

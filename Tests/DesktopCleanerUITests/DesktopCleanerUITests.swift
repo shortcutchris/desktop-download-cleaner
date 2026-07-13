@@ -103,6 +103,24 @@ final class DesktopCleanerUITests: XCTestCase {
     }
 
     @MainActor
+    func testHelpWindowDoesNotRestoreOverMainWindow() {
+        continueAfterFailure = false
+        let app = launchApp(language: "en")
+        let helpButton = app.descendants(matching: .any)["welcome.help"]
+        XCTAssertTrue(helpButton.waitForExistence(timeout: 5))
+        helpButton.click()
+        XCTAssertTrue(app.windows["Desktop Cleaner Help"].waitForExistence(timeout: 5))
+        app.terminate()
+
+        let relaunchedApp = launchApp(language: "en")
+        defer { relaunchedApp.terminate() }
+        let demoButton = relaunchedApp.descendants(matching: .any)["welcome.tryDemo"]
+        XCTAssertTrue(demoButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(demoButton.isHittable)
+        XCTAssertFalse(relaunchedApp.windows["Desktop Cleaner Help"].exists)
+    }
+
+    @MainActor
     func testGermanBuildSummaryOpensChangelogSettings() {
         continueAfterFailure = false
         let app = launchApp(language: "de")
@@ -111,14 +129,14 @@ final class DesktopCleanerUITests: XCTestCase {
         let changelogButton = app.descendants(matching: .any)["status.changelog"]
         XCTAssertTrue(changelogButton.waitForExistence(timeout: 5))
         XCTAssertTrue(changelogButton.label.contains("Version 1.3.0"))
-        XCTAssertTrue(changelogButton.label.contains("Build 9"))
+        XCTAssertTrue(changelogButton.label.contains("Build 10"))
         changelogButton.click()
 
         let changelog = app.descendants(matching: .any)["settings.changelog"]
         XCTAssertTrue(changelog.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Versionsverlauf"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.staticTexts["Installiert: Version 1.3.0 · Build 9"].waitForExistence(timeout: 3))
-        let latestSummary = app.descendants(matching: .any)["changelog.release.1.3.0.summary"]
+        XCTAssertTrue(app.staticTexts["Installiert: Version 1.3.0 · Build 10"].waitForExistence(timeout: 3))
+        let latestSummary = app.descendants(matching: .any)["changelog.release.1.3.0.summary"].firstMatch
         XCTAssertTrue(latestSummary.waitForExistence(timeout: 3))
         XCTAssertTrue(
             latestSummary.label.contains(

@@ -1,0 +1,145 @@
+{
+  "releases": [
+    {
+      "version": "1.3.0",
+      "build": "9",
+      "date": "2026-07-13",
+      "summaryKey": "Offline help, guided tour, and an in-app changelog.",
+      "sections": [
+        {
+          "kind": "added",
+          "itemKeys": [
+            "Searchable offline Help in German and English.",
+            "A safe interactive tour for planning, approval, staging, and undo.",
+            "A complete version history inside Settings.",
+            "A clickable version and build summary in the main window."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "build": "8",
+      "date": "2026-07-12",
+      "summaryKey": "German and English throughout the complete app.",
+      "sections": [
+        {
+          "kind": "added",
+          "itemKeys": [
+            "Immediate language switching between System Default, English, and German.",
+            "An extensible localization manifest for future languages."
+          ]
+        },
+        {
+          "kind": "improved",
+          "itemKeys": [
+            "OpenAI proposal reasons follow the selected interface language without changing cleanup data."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.4",
+      "build": "7",
+      "date": "2026-07-12",
+      "summaryKey": "A clean signed update target for end-to-end updater validation.",
+      "sections": [
+        {
+          "kind": "fixed",
+          "itemKeys": [
+            "Published a clean signed update target for updater verification."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.3",
+      "build": "6",
+      "date": "2026-07-12",
+      "summaryKey": "Reliable Sparkle installation in the macOS sandbox.",
+      "sections": [
+        {
+          "kind": "fixed",
+          "itemKeys": [
+            "Sandboxed installations can launch Sparkle's required installer service.",
+            "Release validation rejects archives missing the required Sparkle configuration."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.2",
+      "build": "5",
+      "date": "2026-07-12",
+      "summaryKey": "Portable release checksums.",
+      "sections": [
+        {
+          "kind": "fixed",
+          "itemKeys": [
+            "Checksum files now contain portable asset names instead of local build paths."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.1",
+      "build": "4",
+      "date": "2026-07-12",
+      "summaryKey": "Signed manual and optional automatic updates.",
+      "sections": [
+        {
+          "kind": "added",
+          "itemKeys": [
+            "Manual update checks in Settings and the application menu.",
+            "Optional automatic checks against the signed public stable feed."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "build": "3",
+      "date": "2026-07-12",
+      "summaryKey": "Advanced review, rules, diagnostics, and update readiness.",
+      "sections": [
+        {
+          "kind": "added",
+          "itemKeys": [
+            "Source depth, age, exclusion, duplicate, and session-retention controls.",
+            "Multi-selection review, exact AI request preview, rules, and redacted diagnostics.",
+            "Persistent plans, configurable filename styles, and explicit session finalization."
+          ]
+        },
+        {
+          "kind": "security",
+          "itemKeys": [
+            "Duplicate hashes remain local and diagnostics structurally exclude private file data."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "build": "2",
+      "date": "2026-07-12",
+      "summaryKey": "The first complete safe Desktop Cleaner release.",
+      "sections": [
+        {
+          "kind": "added",
+          "itemKeys": [
+            "Native onboarding, read-only scanning, reviewable plans, and deterministic organization.",
+            "Transactional staging, durable journals, recovery, and complete session undo.",
+            "Optional metadata-only OpenAI proposals with a Keychain-stored user API key.",
+            "A signed, notarized universal macOS app with a dedicated premium icon."
+          ]
+        },
+        {
+          "kind": "security",
+          "itemKeys": [
+            "Sensitive files stay outside AI batches and model output cannot control destructive actions."
+          ]
+        }
+      ]
+    }
+  ]
+}

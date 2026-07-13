@@ -38,6 +38,7 @@ final class AppModel: ObservableObject {
     }
     @Published var selectedSessionID: UUID?
     @Published var selectedSessionFileURLs: [URL] = []
+    @Published var selectedSettingsTab: SettingsTab = .general
     @Published var planSortOption: PlanSortOption = .filename
     @Published var searchText = ""
     @Published var isBusy = false

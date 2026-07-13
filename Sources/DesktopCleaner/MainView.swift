@@ -34,6 +34,7 @@ struct MainView: View {
 
 private struct WelcomeView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         ZStack {
@@ -76,6 +77,13 @@ private struct WelcomeView: View {
                     Label("Scanning and planning are read-only. Nothing is deleted automatically.", systemImage: "lock.shield.fill")
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                    Button {
+                        openWindow(id: "help")
+                    } label: {
+                        Label("Help & Guide", systemImage: "questionmark.circle")
+                    }
+                    .buttonStyle(.link)
+                    .accessibilityIdentifier("welcome.help")
                 }
 
                 SafetyStackIllustration()
@@ -99,6 +107,7 @@ private struct SafetyStackIllustration: View {
 
 private struct WorkspaceView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         NavigationSplitView {
@@ -118,6 +127,13 @@ private struct WorkspaceView: View {
                 }
                 .disabled(model.isBusy || model.selectedSourceID == nil)
                 .accessibilityIdentifier("toolbar.scan")
+
+                Button {
+                    openWindow(id: "help")
+                } label: {
+                    Label("Help", systemImage: "questionmark.circle")
+                }
+                .accessibilityIdentifier("toolbar.help")
 
                 Button { model.approveSafeItems() } label: {
                     Label("Approve Safe", systemImage: "checkmark.circle")
@@ -655,6 +671,7 @@ private struct ConfidenceBadge: View {
 
 private struct StatusBar: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         HStack(spacing: 8) {
@@ -668,6 +685,25 @@ private struct StatusBar: View {
                     String(model.pendingCount)
                 ))
             }
+            Button {
+                model.selectedSettingsTab = .changelog
+                openSettings()
+            } label: {
+                Label(
+                    model.localized(
+                        "Version %@ · Build %@ · %@",
+                        AppBuildInfo.version,
+                        AppBuildInfo.build,
+                        model.localized(
+                            AppChangelogManifest.bundled.latest?.summaryKey ?? "View changelog"
+                        )
+                    ),
+                    systemImage: "clock.arrow.circlepath"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("status.changelog")
+            .help(model.localized("Open version history in Settings"))
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -679,6 +715,7 @@ private struct StatusBar: View {
 
 struct MenuBarView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -697,6 +734,7 @@ struct MenuBarView: View {
             if let session = model.sessions.first {
                 Button("Reveal Latest Session") { model.reveal(session) }
             }
+            Button("Help & Guide") { openWindow(id: "help") }
             SettingsLink { Text("Settings…") }
             Divider()
             Button("Quit Desktop Cleaner") { NSApplication.shared.terminate(nil) }

@@ -8,15 +8,15 @@ Desktop Cleaner is a native macOS utility for safely organizing files accumulate
 
 ## Download and install
 
-Download the latest notarized universal macOS build from [GitHub Releases](https://github.com/shortcutchris/desktop-download-cleaner/releases/latest/download/DesktopCleaner-1.2.0.zip).
+Download the latest notarized universal macOS build from [GitHub Releases](https://github.com/shortcutchris/desktop-download-cleaner/releases/latest/download/DesktopCleaner-1.3.0.zip).
 
-1. Download and expand `DesktopCleaner-1.2.0.zip`.
+1. Download and expand `DesktopCleaner-1.3.0.zip`.
 2. Move **Desktop Cleaner.app** into `/Applications`.
 3. Launch the app, choose Desktop, Downloads, or another folder, and review the read-only cleanup plan before approving anything.
 
 The release is signed with Developer ID, notarized by Apple, stapled for offline Gatekeeper verification, and includes both Apple Silicon and Intel code. The release page also provides a SHA-256 checksum and a signed Sparkle appcast. Use **Settings → Updates** to check manually or opt in to automatic checks; automatic checks remain off by default.
 
-## What 1.2 includes
+## What 1.3 includes
 
 - Sandboxed, security-scoped access to user-selected source and review folders.
 - Read-only scanning with per-source depth and enablement, an optional minimum-age threshold, editable glob exclusions, deterministic categories, local hash-on-demand duplicate detection, sensitive-file protection, and safe filename cleanup.
@@ -27,6 +27,8 @@ The release is signed with Developer ID, notarized by Apple, stapled for offline
 - A user-owned API key stored only in macOS Keychain, request-scope preview, connection test, and key deletion.
 - Menu bar access, launch at login, staging notifications, exact redacted-diagnostics preview/export, app-data reset, Sparkle integration, and a complete original premium 3D macOS icon set.
 - A fully localized German and English interface with an immediate, persistent language switch in **Settings → General → Language**. System language remains available as the default.
+- A searchable, fully offline Help window in German and English, including a safe interactive tour that simulates source selection, planning, approval, staging, and undo without accessing or changing files.
+- A localized in-app version history under **Settings → Changelog**. The main-window status bar shows the installed version and build plus the latest release summary and opens that tab directly.
 
 Desktop Cleaner is not a drag-and-drop shelf and not a general system cleaner. It never automatically deletes files.
 
@@ -62,3 +64,7 @@ The shared `DesktopCleaner` scheme runs unit, temporary-directory integration, a
 ### Add another language
 
 Add one case to `AppLanguage` in `Sources/DesktopCleaner/Localization.swift`, add the language's display name and AI response-language name there, then add `Resources/<language-code>.lproj/Localizable.strings`. XcodeGen groups `.lproj` resources automatically; no view or workflow code needs to change.
+
+### Add a release to the in-app changelog
+
+Add the release metadata and localization keys to `Resources/AppChangelog.json`, then translate those keys in every shipped language bundle. The localization test verifies that the manifest version and build match `project.yml` and that every German changelog entry is present.

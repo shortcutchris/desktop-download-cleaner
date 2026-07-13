@@ -238,12 +238,24 @@ Rules are ordered, enabled/disabled, editable, exportable, and locally evaluated
 - AI: API key, connection test, privacy level, quality preference.
 - Rules: ordered deterministic rules.
 - Updates: manual checks against the signed public stable feed and opt-in automatic checks.
+- Help: open the localized offline guide and interactive workflow tour.
+- Changelog: show the installed version and build plus categorized, localized release notes from the bundled version history.
 
-## 10. Menu bar behavior
+The main-window status bar displays the installed version, build number, and latest release summary. Activating it opens Settings directly on the Changelog tab.
+
+## 10. Help and guided learning
+
+- Provide a searchable offline Help window in every supported interface language.
+- Make Help available from onboarding, the review toolbar, Settings, menu bar, and the standard macOS Help menu with Command-?.
+- Cover setup, plan review, staging and undo, safety and privacy, optional AI assistance, rules, exclusions, shortcuts, and troubleshooting.
+- The interactive tour must be a pure in-memory simulation. It may not request folder access, scan, create, rename, copy, move, delete, transmit, or persist user files or data.
+- Help content follows the selected app language immediately and uses the same extensible resource-bundle architecture as the rest of the interface.
+
+## 11. Menu bar behavior
 
 The menu bar is a lightweight entry point, not the complete application. It displays pending file count, starts a scan, opens the current plan, and shows the most recent session. All consequential review happens in the main window.
 
-## 11. Accessibility and native behavior
+## 12. Accessibility and native behavior
 
 - Complete keyboard navigation and VoiceOver labels.
 - System text styles, reduced-motion support, and sufficient contrast.
@@ -252,7 +264,7 @@ The menu bar is a lightweight entry point, not the complete application. It disp
 - Respect light, dark, and increased-contrast appearances.
 - Destructive-looking actions require clear labels even if technically reversible.
 
-## 12. Data and privacy
+## 13. Data and privacy
 
 - Local data includes bookmarks, settings, rules, scan cache, proposals, and transaction logs.
 - Do not store file contents in the app database.
@@ -260,7 +272,7 @@ The menu bar is a lightweight entry point, not the complete application. It disp
 - Redact filenames and paths from diagnostic logs by default.
 - Provide “Delete all app data” without deleting user files.
 
-## 13. Acceptance criteria for version 1.0
+## 14. Acceptance criteria for version 1.0
 
 - At least Desktop, Downloads, and custom sources can be granted and rescanned.
 - Scanning is demonstrably read-only.

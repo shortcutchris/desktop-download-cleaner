@@ -57,6 +57,14 @@ Wraps Sparkle so update behavior remains separate from application state.
 
 The application target owns a small `AppLanguage` manifest and localized resource bundles. SwiftUI receives the selected locale at each scene root, while dynamic status, error, notification, and domain-display strings pass through the same bundle-backed formatter. Persisted enums, category folder names, user-authored rules, filenames, and transaction paths remain language-neutral or unchanged, so switching the interface language never mutates cleanup data. A new language requires one manifest entry and one `<code>.lproj/Localizable.strings` resource.
 
+### Help
+
+The application target owns a dedicated searchable Help window and exposes it from native app entry points. Articles are static localized resources. The interactive tour keeps sample progress only in SwiftUI view state and has no reference to folder access, scanning, transaction, persistence, Keychain, or networking services. This makes guided practice structurally incapable of reading, changing, or transmitting user data.
+
+### Changelog
+
+`Resources/AppChangelog.json` is the application-facing release-history manifest. It contains version, build, date, category, and localization keys rather than presentation markup. Settings renders it locally, and the main-window status bar reads the latest summary from the same manifest. Tests require its newest version and build to match `project.yml` and require every entry to exist in the shipped German catalog. Adding a release therefore stays data-driven and does not require view changes.
+
 ## Core models
 
 ```text

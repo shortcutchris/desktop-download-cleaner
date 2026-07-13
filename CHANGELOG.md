@@ -20,6 +20,10 @@ All notable changes are documented here. The project follows semantic versioning
 - Release history is driven by a bundled manifest validated against the current marketing version and build.
 - Guided-tour steps and changelog summaries expose explicit accessibility labels for reliable VoiceOver and UI automation.
 
+### Fixed
+
+- The Help window no longer restores over the main window after relaunch on macOS 15 or later.
+
 ## [1.2.0] - 2026-07-12
 
 ### Added

@@ -52,7 +52,7 @@ final class LocalizationResourceTests: XCTestCase {
         XCTAssertEqual(manifest.releases.count, 8)
         XCTAssertEqual(Set(manifest.releases.map(\.version)).count, manifest.releases.count)
         XCTAssertEqual(latest.version, "1.3.0")
-        XCTAssertEqual(latest.build, "9")
+        XCTAssertEqual(latest.build, "10")
 
         let project = try String(
             contentsOf: repositoryRoot.appendingPathComponent("project.yml"),

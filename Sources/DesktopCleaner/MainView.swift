@@ -78,6 +78,7 @@ private struct WelcomeView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     Button {
+                        model.requestHelpPresentation()
                         openWindow(id: "help")
                     } label: {
                         Label("Help & Guide", systemImage: "questionmark.circle")
@@ -129,6 +130,7 @@ private struct WorkspaceView: View {
                 .accessibilityIdentifier("toolbar.scan")
 
                 Button {
+                    model.requestHelpPresentation()
                     openWindow(id: "help")
                 } label: {
                     Label("Help", systemImage: "questionmark.circle")
@@ -734,7 +736,10 @@ struct MenuBarView: View {
             if let session = model.sessions.first {
                 Button("Reveal Latest Session") { model.reveal(session) }
             }
-            Button("Help & Guide") { openWindow(id: "help") }
+            Button("Help & Guide") {
+                model.requestHelpPresentation()
+                openWindow(id: "help")
+            }
             SettingsLink { Text("Settings…") }
             Divider()
             Button("Quit Desktop Cleaner") { NSApplication.shared.terminate(nil) }
